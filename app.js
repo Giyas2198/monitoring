@@ -1,0 +1,490 @@
+// ==========================================
+// CONFIGURATION, STATE & NAVIGATION MANAGEMENT
+// ==========================================
+
+const getTodayDateString = () => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+};
+
+let selectedDate = getTodayDateString();
+let appData = [];
+let customColumns = JSON.parse(localStorage.getItem('jotrans_columns')) || [];
+
+// DOM Elements Navigasi Sidebar
+const navYardBtn = document.getElementById('nav-yard');
+const navWarehouseBtn = document.getElementById('nav-warehouse');
+const viewYardMonitoring = document.getElementById('view-yard-monitoring');
+const viewTimeWarehouse = document.getElementById('view-time-warehouse');
+const pageTitle = document.getElementById('page-title');
+const pageDesc = document.getElementById('page-desc');
+
+// Fungsi Pengendali Switch Halaman (Tab Menu Navbar)
+function switchPage(target) {
+    if (target === 'yard') {
+        // Aktifkan style button Yard
+        navYardBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left";
+        navWarehouseBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left";
+        
+        // Tampilkan/Sembunyikan Konten Container
+        viewYardMonitoring.classList.remove('hidden');
+        viewTimeWarehouse.classList.add('hidden');
+        
+        pageTitle.innerText = "Yard Monitoring";
+        pageDesc.innerText = "Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.";
+    } else if (target === 'warehouse') {
+        // Aktifkan style button Warehouse
+        navYardBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left";
+        navWarehouseBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left";
+        
+        // Tampilkan/Sembunyikan Konten Container
+        viewYardMonitoring.class= viewYardMonitoring.classList.add('hidden');
+        viewTimeWarehouse.classList.remove('hidden');
+        
+        pageTitle.innerText = "Time in Warehouse";
+        pageDesc.innerText = "Analisis rata-rata durasi kinerja tunggu dan proses inap kontainer ekspedisi.";
+    }
+}
+
+// Event Listener Klik Menu Sidebar
+navYardBtn.addEventListener('click', () => switchPage('yard'));
+navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
+
+
+// ==========================================
+// CORE DOM ELEMENTS SELECTION
+// ==========================================
+const fileInput = document.getElementById('csv-file');
+const customFileInput = document.getElementById('custom-csv-file');
+const tableHeader = document.getElementById('table-header');
+const tableBody = document.getElementById('table-body');
+const btnAddColumn = document.getElementById('btn-add-column');
+const btnResetAll = document.getElementById('btn-reset-all');
+const btnUploadCustom = document.getElementById('btn-upload-custom');
+const datePicker = document.getElementById('archive-date-picker');
+
+// Element Scanner Emulator
+const scanOrderId = document.getElementById('scan-order-id');
+const scanCheckpoint = document.getElementById('scan-checkpoint');
+const btnScan = document.getElementById('btn-scan');
+
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    if (datePicker) {
+        datePicker.value = selectedDate;
+    }
+    loadDataByDate(selectedDate);
+});
+
+function loadDataByDate(dateStr) {
+    const key = `jotrans_data_${dateStr}`;
+    appData = JSON.parse(localStorage.getItem(key)) || [];
+    renderDashboard();
+}
+
+if (datePicker) {
+    datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        loadDataByDate(selectedDate);
+    });
+}
+
+// ==========================================
+// CORE WORKFLOW: RAW MASTER CSV UPLOAD
+// ==========================================
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) { processRawData(results.data); }
+    });
+});
+
+function processRawData(rawRows) {
+    let currentTransporter = '';
+    let currentStage = '';
+    let parsedData = [];
+    
+    const uploadTime = new Date(`${selectedDate}T06:00:00`).toISOString();
+
+    rawRows.forEach((row) => {
+        let cleanRow = {};
+        Object.keys(row).forEach(key => {
+            if (key.trim() !== '') cleanRow[key.trim()] = row[key] ? row[key].trim() : '';
+        });
+
+        if (cleanRow['Transporter']) currentTransporter = cleanRow['Transporter'];
+        if (cleanRow['Stage']) currentStage = cleanRow['Stage'];
+
+        let orderId = cleanRow['Customer Order'];
+
+        if (orderId) {
+            let item = {
+                id: orderId,
+                transporter: currentTransporter || 'UNKNOWN',
+                stage: currentStage || '-',
+                customerName: cleanRow['Customer Name'] || '-',
+                shipTo: cleanRow['Ship To'] || '-',
+                volume: cleanRow['Volume'] || '0',
+                status: 'OTW Muat',
+                last_scan_time: '',
+                time_otw: uploadTime,
+                time_gatein: '',
+                time_prosesmuat: '',
+                time_selesaimuat: '',
+                time_gateout: ''
+            };
+            customColumns.forEach(col => { item[col.toLowerCase()] = ''; });
+            parsedData.push(item);
+        }
+    });
+
+    appData = parsedData; 
+    saveToStorage(); 
+    renderDashboard();
+    fileInput.value = "";
+    alert(`Berhasil mengimpor ${appData.length} data ke arsip tanggal: ${selectedDate}!`);
+}
+
+// ==========================================
+// BARCODE SCAN LOGIC (EMULATOR & DRIVER LINK)
+// ==========================================
+btnScan.addEventListener('click', () => {
+    const inputId = scanOrderId.value.trim().toUpperCase();
+    const selectedCheckpoint = scanCheckpoint.value;
+    if (!inputId) return;
+    
+    const targetIndex = appData.findIndex(item => item.id.toUpperCase() === inputId);
+    if (targetIndex === -1) { 
+        alert(`Order ID [${inputId}] tidak ditemukan pada rekaman tanggal ${selectedDate}.`); 
+        return; 
+    }
+    
+    const now = new Date();
+    const isoString = now.toISOString();
+    
+    appData[targetIndex].status = selectedCheckpoint;
+    appData[targetIndex].last_scan_time = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+
+    if (selectedCheckpoint === 'Gate In') appData[targetIndex].time_gatein = isoString;
+    if (selectedCheckpoint === 'Proses Muat') appData[targetIndex].time_prosesmuat = isoString;
+    if (selectedCheckpoint === 'Selesai Muat') appData[targetIndex].time_selesaimuat = isoString;
+    if (selectedCheckpoint === 'Gate Out') appData[targetIndex].time_gateout = isoString;
+
+    saveToStorage(); 
+    renderDashboard(); 
+    scanOrderId.value = ''; 
+    scanOrderId.focus();
+});
+
+window.addEventListener('storage', (e) => {
+    if (e.key === `jotrans_data_${selectedDate}`) {
+        appData = JSON.parse(e.newValue) || [];
+        renderDashboard();
+    }
+});
+
+// ==========================================
+// DURATION & KPI CALCULATION ENGINE
+// ==========================================
+function calculateDuration(startTimeStr, endTimeStr) {
+    if (!startTimeStr || !endTimeStr) return '-';
+    const start = new Date(startTimeStr);
+    const end = new Date(endTimeStr);
+    const diffMs = end - start;
+    if (diffMs < 0) return '-';
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) {
+        return `${diffMins} mnt`;
+    } else {
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        return `${hours} jam ${mins} mnt`;
+    }
+}
+
+function getDurationInMinutes(startTimeStr, endTimeStr) {
+    if (!startTimeStr || !endTimeStr) return null;
+    const start = new Date(startTimeStr);
+    const end = new Date(endTimeStr);
+    const diffMs = end - start;
+    return diffMs >= 0 ? Math.floor(diffMs / 60000) : null;
+}
+
+function formatMinutesToText(totalMins) {
+    if (totalMins === null || isNaN(totalMins)) return '-';
+    if (totalMins < 60) return `${Math.round(totalMins)} mnt`;
+    const hours = Math.floor(totalMins / 60);
+    const mins = Math.round(totalMins % 60);
+    return `${hours} jam ${mins} mnt`;
+}
+
+// ==========================================
+// ADVANCED REPORT: TRANSPORTER PERFORMANCE
+// ==========================================
+function calculateTransporterPerformance() {
+    const perfGrid = document.getElementById('transporter-perf-grid');
+    if (!perfGrid) return;
+
+    if (appData.length === 0) {
+        perfGrid.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data untuk kalkulasi KPI riwayat performa ekspedisi.</div>`;
+        return;
+    }
+
+    let groups = {};
+    appData.forEach(item => {
+        const trans = item.transporter;
+        if (!groups[trans]) {
+            groups[trans] = {
+                name: trans,
+                totalOrders: 0,
+                antriMins: [],
+                muatMins: [],
+                adminOutMins: []
+            };
+        }
+        
+        groups[trans].totalOrders++;
+
+        const mAntri = getDurationInMinutes(item.time_otw, item.time_gatein);
+        const mMuat = getDurationInMinutes(item.time_gatein, item.time_selesaimuat);
+        const mAdmin = getDurationInMinutes(item.time_selesaimuat, item.time_gateout);
+
+        if (mAntri !== null) groups[trans].antriMins.push(mAntri);
+        if (mMuat !== null) groups[trans].muatMins.push(mMuat);
+        if (mAdmin !== null) groups[trans].adminOutMins.push(mAdmin);
+    });
+
+    let htmlCards = Object.values(groups).map(g => {
+        const avgAntri = g.antriMins.length ? (g.antriMins.reduce((a, b) => a + b, 0) / g.antriMins.length) : null;
+        const avgMuat = g.muatMins.length ? (g.muatMins.reduce((a, b) => a + b, 0) / g.muatMins.length) : null;
+        const avgAdmin = g.adminOutMins.length ? (g.adminOutMins.reduce((a, b) => a + b, 0) / g.adminOutMins.length) : null;
+
+        return `
+            <div class="bg-gray-50 border border-gray-200 p-5 rounded-xl flex flex-col justify-between hover:shadow-sm transition">
+                <div>
+                    <div class="flex justify-between items-start border-b border-gray-200/60 pb-2 mb-3">
+                        <h4 class="text-xs font-bold text-slate-800 truncate uppercase tracking-wide">🚚 ${g.name}</h4>
+                        <span class="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${g.totalOrders} Loads</span>
+                    </div>
+                    <div class="space-y-2 text-[11px]">
+                        <div class="flex justify-between text-gray-500">
+                            <span>⏳ Rata-rata OTW ➡️ Gate In:</span>
+                            <span class="font-mono font-bold text-gray-700">${formatMinutesToText(avgAntri)}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-500">
+                            <span>🏗️ Rata-rata Proses Muat:</span>
+                            <span class="font-mono font-bold text-orange-600">${formatMinutesToText(avgMuat)}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-500">
+                            <span>📄 Rata-rata Selesai ➡️ Gate Out:</span>
+                            <span class="font-mono font-bold text-purple-600">${formatMinutesToText(avgAdmin)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    perfGrid.innerHTML = htmlCards;
+}
+
+// ==========================================
+// CUSTOM COLUMN MANAGEMENT
+// ==========================================
+btnUploadCustom.addEventListener('click', () => {
+    if (appData.length === 0) {
+        alert(`⚠️ WARNING: Upload Master Data Pengiriman tanggal [${selectedDate}] terlebih dahulu!`);
+        return;
+    }
+    customFileInput.click();
+});
+
+customFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) { processCustomColumnCSV(results.data); }
+    });
+});
+
+function processCustomColumnCSV(csvRows) {
+    if (csvRows.length === 0) return;
+    const headers = Object.keys(csvRows[0]).map(h => h.trim());
+    const orderKey = headers.find(h => h.toLowerCase() === 'customer order' || h.toLowerCase() === 'order id');
+    const customDataKey = headers.find(h => h.toLowerCase() !== 'customer order' && h.toLowerCase() !== 'order id' && h !== '');
+
+    if (!orderKey || !customDataKey) {
+        alert("❌ ERROR: Format CSV kustom harus menyertakan kolom 'Customer Order'.");
+        return;
+    }
+
+    const lowerCustomKey = customDataKey.toLowerCase();
+    if (!customColumns.includes(customDataKey)) {
+        customColumns.push(customDataKey);
+        localStorage.setItem('jotrans_columns', JSON.stringify(customColumns));
+    }
+
+    let updateMatchCount = 0;
+    csvRows.forEach(row => {
+        const targetOrderId = row[orderKey] ? row[orderKey].trim().toUpperCase() : '';
+        const incomingValue = row[customDataKey] ? row[customDataKey].trim() : '';
+
+        if (targetOrderId) {
+            const index = appData.findIndex(item => item.id.toUpperCase() === targetOrderId);
+            if (index !== -1) {
+                appData[index][lowerCustomKey] = incomingValue;
+                updateMatchCount++;
+            }
+        }
+    });
+
+    saveToStorage(); 
+    renderDashboard(); 
+    customFileInput.value = "";
+    alert(`⚡ SUKSES: Kolom kustom [${customDataKey}] berhasil di-inject ke ${updateMatchCount} order pada tanggal ${selectedDate}!`);
+}
+
+btnAddColumn.addEventListener('click', () => {
+    const columnName = prompt("Masukkan nama kolom manual baru:");
+    if (!columnName) return;
+    const cleanKey = columnName.trim();
+    if (customColumns.includes(cleanKey)) return;
+    
+    customColumns.push(cleanKey);
+    localStorage.setItem('jotrans_columns', JSON.stringify(customColumns));
+    appData = appData.map(item => ({ ...item, [cleanKey.toLowerCase()]: '' }));
+    saveToStorage(); 
+    renderDashboard();
+});
+
+function updateCustomValue(index, key, val) { 
+    appData[index][key] = val; 
+    saveToStorage(); 
+    updateCounters(); 
+}
+
+// ==========================================
+// RENDER UI & RENDERING DATA GRID
+// ==========================================
+function renderDashboard() { 
+    updateCounters(); 
+    calculateTransporterPerformance(); 
+    renderTableHeader(); 
+    renderTableBody(); 
+}
+
+function updateCounters() {
+    const counts = { 'OTW Muat': 0, 'Gate In': 0, 'Proses Muat': 0, 'Selesai Muat': 0, 'Gate Out': 0 };
+    appData.forEach(item => { if (counts[item.status] !== undefined) counts[item.status]++; });
+    document.getElementById('count-otw').innerText = counts['OTW Muat'] + " Mobil";
+    document.getElementById('count-gatein').innerText = counts['Gate In'] + " Mobil";
+    document.getElementById('count-loading').innerText = counts['Proses Muat'] + " Mobil";
+    document.getElementById('count-loaded').innerText = counts['Selesai Muat'] + " Mobil";
+    document.getElementById('count-gateout').innerText = counts['Gate Out'] + " Mobil";
+}
+
+function renderTableHeader() {
+    let headers = [
+        'Transporter', 'Stage', 'Order ID', 'Customer Name', 'Volume', 'Status Workflow',
+        '⏳ Antri (OTW-In)', '🏗️ Proses Muat', '📄 Admin Out', '⏱️ Total Yard Time'
+    ];
+    customColumns.forEach(col => headers.push(col));
+    headers.push('Aksi');
+    tableHeader.innerHTML = headers.map(h => `<th class="px-3 py-3 font-semibold">${h}</th>`).join('');
+}
+
+function renderTableBody() {
+    if (appData.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="100%" class="text-center p-12 text-gray-400 italic font-medium">Belum ada data aktif pada tanggal ${selectedDate}. Silakan unggah file CSV pengiriman baru.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = appData.map((item, index) => {
+        let badgeColor = 'bg-yellow-100 text-yellow-800';
+        if (item.status === 'Gate In') badgeColor = 'bg-blue-100 text-blue-800';
+        if (item.status === 'Proses Muat') badgeColor = 'bg-orange-100 text-orange-800';
+        if (item.status === 'Selesai Muat') badgeColor = 'bg-purple-100 text-purple-800';
+        if (item.status === 'Gate Out') badgeColor = 'bg-green-100 text-green-800';
+
+        const getLastScanTimeOnly = (dataItem) => {
+            let targetIso = '';
+            if (dataItem.status === 'OTW Muat') targetIso = dataItem.time_otw;
+            if (dataItem.status === 'Gate In') targetIso = dataItem.time_gatein;
+            if (dataItem.status === 'Proses Muat') targetIso = dataItem.time_prosesmuat;
+            if (dataItem.status === 'Selesai Muat') targetIso = dataItem.time_selesaimuat;
+            if (dataItem.status === 'Gate Out') targetIso = dataItem.time_gateout;
+
+            if (!targetIso) return '';
+            const dateObj = new Date(targetIso);
+            return dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+
+        const jamScanTerakhir = getLastScanTimeOnly(item);
+        let timeLog = jamScanTerakhir ? `<br><span class="text-[10px] text-gray-500 font-mono font-semibold">⏱️ ${jamScanTerakhir}</span>` : '';
+
+        const durasiAntri = calculateDuration(item.time_otw, item.time_gatein);
+        const durasiMuat = calculateDuration(item.time_gatein, item.time_selesaimuat);
+        const durasiAdminOut = calculateDuration(item.time_selesaimuat, item.time_gateout);
+        const totalYardTime = calculateDuration(item.time_gatein, item.time_gateout);
+
+        let customCellsHtml = customColumns.map(col => {
+            let key = col.toLowerCase();
+            return `<td><input type="text" value="${item[key] || ''}" onchange="updateCustomValue(${index}, '${key}', this.value)" class="border p-1 rounded w-24 text-xs bg-gray-50 focus:bg-white"></td>`;
+        }).join('');
+
+        return `
+            <tr class="hover:bg-gray-50 transition border-b text-xs">
+                <td class="px-3 py-2 font-medium">${item.transporter}</td>
+                <td class="px-3 py-2 font-semibold text-blue-600">${item.stage}</td>
+                <td class="px-3 py-2 font-bold text-gray-700">${item.id}</td>
+                <td class="px-3 py-2 truncate max-w-[120px]">${item.customerName}</td>
+                <td class="px-3 py-2">${item.volume}</td>
+                
+                <td class="px-3 py-2 text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>
+                    ${timeLog}
+                </td>
+
+                <td class="px-3 py-2 font-mono text-gray-600 font-medium">${durasiAntri}</td>
+                <td class="px-3 py-2 font-mono text-orange-600 font-medium">${durasiMuat}</td>
+                <td class="px-3 py-2 font-mono text-purple-600 font-medium">${durasiAdminOut}</td>
+                <td class="px-3 py-2 font-mono font-bold text-emerald-600">${totalYardTime}</td>
+                
+                ${customCellsHtml}
+                <td class="px-3 py-2"><button onclick="deleteRow(${index})" class="text-red-500 hover:text-red-700 font-medium">Hapus</button></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ==========================================
+// UTILITY HELPERS
+// ==========================================
+btnResetAll.addEventListener('click', () => {
+    if (confirm(`⚠️ PERINGATAN: Menghapus seluruh data tracking aktif khusus tanggal ${selectedDate}?`)) {
+        const key = `jotrans_data_${selectedDate}`;
+        localStorage.removeItem(key);
+        appData = [];
+        renderDashboard();
+    }
+});
+
+function deleteRow(index) { 
+    if (confirm("Hapus order ini dari daftar aktif?")) { 
+        appData.splice(index, 1); 
+        saveToStorage(); 
+        renderDashboard(); 
+    } 
+}
+
+function saveToStorage() {
+    const key = `jotrans_data_${selectedDate}`;
+    localStorage.setItem(key, JSON.stringify(appData));
+}
