@@ -24,23 +24,19 @@ const pageDesc = document.getElementById('page-desc');
 // Fungsi Pengendali Switch Halaman (Tab Menu Navbar)
 function switchPage(target) {
     if (target === 'yard') {
-        // Aktifkan style button Yard
         navYardBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left";
         navWarehouseBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left";
         
-        // Tampilkan/Sembunyikan Konten Container
         viewYardMonitoring.classList.remove('hidden');
         viewTimeWarehouse.classList.add('hidden');
         
         pageTitle.innerText = "Yard Monitoring";
         pageDesc.innerText = "Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.";
     } else if (target === 'warehouse') {
-        // Aktifkan style button Warehouse
         navYardBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left";
         navWarehouseBtn.className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left";
         
-        // Tampilkan/Sembunyikan Konten Container
-        viewYardMonitoring.class= viewYardMonitoring.classList.add('hidden');
+        viewYardMonitoring.classList.add('hidden');
         viewTimeWarehouse.classList.remove('hidden');
         
         pageTitle.innerText = "Time in Warehouse";
@@ -48,7 +44,6 @@ function switchPage(target) {
     }
 }
 
-// Event Listener Klik Menu Sidebar
 navYardBtn.addEventListener('click', () => switchPage('yard'));
 navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
 
@@ -130,6 +125,7 @@ function processRawData(rawRows) {
                 customerName: cleanRow['Customer Name'] || '-',
                 shipTo: cleanRow['Ship To'] || '-',
                 volume: cleanRow['Volume'] || '0',
+                truckType: cleanRow['Truck Type'] || cleanRow['truckType'] || cleanRow['Tipe Truk'] || '-', 
                 status: 'OTW Muat',
                 last_scan_time: '',
                 time_otw: uploadTime,
@@ -151,7 +147,7 @@ function processRawData(rawRows) {
 }
 
 // ==========================================
-// BARCODE SCAN LOGIC (EMULATOR & DRIVER LINK)
+// BARCODE SCAN LOGIC (EMULATOR LOCAL DASHBOARD)
 // ==========================================
 btnScan.addEventListener('click', () => {
     const inputId = scanOrderId.value.trim().toUpperCase();
@@ -181,10 +177,11 @@ btnScan.addEventListener('click', () => {
     scanOrderId.focus();
 });
 
+// MEMANTAU PERUBAHAN REAL-TIME DARI SCANNER PORTAL HP (FIXED)
 window.addEventListener('storage', (e) => {
     if (e.key === `jotrans_data_${selectedDate}`) {
         appData = JSON.parse(e.newValue) || [];
-        renderDashboard();
+        renderDashboard(); // Re-render otomatis pemicu live update
     }
 });
 
@@ -215,6 +212,9 @@ function getDurationInMinutes(startTimeStr, endTimeStr) {
     return diffMs >= 0 ? Math.floor(diffMs / 60000) : null;
 }
 
+// ==========================================
+// ADVANCED REPORT: TRANSPORTER PERFORMANCE
+// ==========================================
 function formatMinutesToText(totalMins) {
     if (totalMins === null || isNaN(totalMins)) return '-';
     if (totalMins < 60) return `${Math.round(totalMins)} mnt`;
@@ -223,9 +223,6 @@ function formatMinutesToText(totalMins) {
     return `${hours} jam ${mins} mnt`;
 }
 
-// ==========================================
-// ADVANCED REPORT: TRANSPORTER PERFORMANCE
-// ==========================================
 function calculateTransporterPerformance() {
     const perfGrid = document.getElementById('transporter-perf-grid');
     if (!perfGrid) return;
@@ -380,19 +377,75 @@ function renderDashboard() {
     renderTableBody(); 
 }
 
+// ==========================================
+// SMART COUNTER ENGINE BASED ON TRUCK CAPACITY
+// ==========================================
 function updateCounters() {
-    const counts = { 'OTW Muat': 0, 'Gate In': 0, 'Proses Muat': 0, 'Selesai Muat': 0, 'Gate Out': 0 };
-    appData.forEach(item => { if (counts[item.status] !== undefined) counts[item.status]++; });
-    document.getElementById('count-otw').innerText = counts['OTW Muat'] + " Mobil";
-    document.getElementById('count-gatein').innerText = counts['Gate In'] + " Mobil";
-    document.getElementById('count-loading').innerText = counts['Proses Muat'] + " Mobil";
-    document.getElementById('count-loaded').innerText = counts['Selesai Muat'] + " Mobil";
-    document.getElementById('count-gateout').innerText = counts['Gate Out'] + " Mobil";
+    const truckCapacities = {
+        'CDE': 2000,
+        'CDD': 4000,
+        'CDDL': 5100,
+        'FUSO': 8000,
+        'WING BOX': 11000
+    };
+
+    let stageGroups = {};
+
+    appData.forEach(item => {
+        const stageNum = (item.stage || '').trim();
+        const status = item.status;
+        const truckType = (item.truckType || item.truck_type || '').trim().toUpperCase(); 
+        
+        let volume = 0;
+        if (item.volume) {
+            volume = parseFloat(String(item.volume).replace(/,/g, '')) || 0;
+        }
+
+        if (stageNum && status) {
+            const groupKey = `${stageNum}_${status}`;
+
+            if (!stageGroups[groupKey]) {
+                stageGroups[groupKey] = {
+                    status: status,
+                    truckType: truckType,
+                    totalVolume: 0
+                };
+            }
+            stageGroups[groupKey].totalVolume += volume;
+        }
+    });
+
+    let finalCounts = { 
+        'OTW Muat': 0, 
+        'Gate In': 0, 
+        'Proses Muat': 0, 
+        'Selesai Muat': 0, 
+        'Gate Out': 0 
+    };
+
+    Object.values(stageGroups).forEach(group => {
+        const capacity = truckCapacities[group.truckType];
+        let calculatedTrucks = 1; 
+
+        if (capacity && group.totalVolume > 0) {
+            calculatedTrucks = Math.ceil(group.totalVolume / capacity);
+        }
+
+        if (finalCounts[group.status] !== undefined) {
+            finalCounts[group.status] += calculatedTrucks;
+        }
+    });
+
+    document.getElementById('count-otw').innerText = finalCounts['OTW Muat'] + " Mobil";
+    document.getElementById('count-gatein').innerText = finalCounts['Gate In'] + " Mobil";
+    document.getElementById('count-loading').innerText = finalCounts['Proses Muat'] + " Mobil";
+    document.getElementById('count-loaded').innerText = finalCounts['Selesai Muat'] + " Mobil";
+    document.getElementById('count-gateout').innerText = finalCounts['Gate Out'] + " Mobil";
 }
 
 function renderTableHeader() {
     let headers = [
-        'Transporter', 'Stage', 'Order ID', 'Customer Name', 'Volume', 'Status Workflow',
+        'Transporter', 'Stage', 'Order ID', 'Customer Name', 'Volume', 'Tipe Truk', 'Status Workflow',
         '⏳ Antri (OTW-In)', '🏗️ Proses Muat', '📄 Admin Out', '⏱️ Total Yard Time'
     ];
     customColumns.forEach(col => headers.push(col));
@@ -446,6 +499,7 @@ function renderTableBody() {
                 <td class="px-3 py-2 font-bold text-gray-700">${item.id}</td>
                 <td class="px-3 py-2 truncate max-w-[120px]">${item.customerName}</td>
                 <td class="px-3 py-2">${item.volume}</td>
+                <td class="px-3 py-2 font-semibold text-gray-600">${item.truckType || '-'}</td>
                 
                 <td class="px-3 py-2 text-center">
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>
