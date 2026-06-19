@@ -51,7 +51,7 @@
                        class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none focus:border-orange-500">
             </div>
 
-            <!-- BARU! Input Stage Number -->
+            <!-- Input Stage Number -->
             <div>
                 <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">2. Nomor Stage (Opsional)</label>
                 <input type="number" id="input-stage-number" placeholder="Contoh: 35 (Kosongkan jika semua stage)" 
@@ -110,7 +110,7 @@
             setTimeout(() => { toastMsg.classList.add('hidden'); }, 6000);
         }
 
-        // ENGINE SCAN UTAMA WITH TIME STAMP & STAGE FILTER
+        // ENGINE SCAN UTAMA WITH TIME STAMP & STAGE FILTER (FIXED & LINKED)
         function processSmartScan(scannedPos) {
             // 1. Tentukan nama vendor yang dipakai
             let finalVendorName = selectVendor.value;
@@ -134,11 +134,18 @@
 
             const now = new Date();
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+            const isoString = now.toISOString();
 
-            let appData = JSON.parse(localStorage.getItem('jotrans_data')) || [];
+            // SINKRONISASI LOGIKA STORAGE KEY BERDASARKAN TANGGAL AKTIF HARI INI
+            const localDateStr = now.getFullYear() + '-' + 
+                                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                                 String(now.getDate()).padStart(2, '0');
+            const storageKey = `jotrans_data_${localDateStr}`;
+
+            let appData = JSON.parse(localStorage.getItem(storageKey)) || [];
 
             if (appData.length === 0) {
-                showToast("⚠️ WARNING: Data dashboard kosong. Silakan upload file CSV terlebih dahulu!", false);
+                showToast(`⚠️ WARNING: Data dashboard tanggal [${localDateStr}] kosong. Silakan upload file CSV terlebih dahulu!`, false);
                 return;
             }
 
@@ -146,14 +153,18 @@
             let updatedCount = 0;
             appData = appData.map(item => {
                 const matchVendor = item.transporter.toUpperCase() === finalVendorName.toUpperCase();
-                
-                // Jika targetedStage diisi, pastikan string/angka stage di item sama.
-                // Jika targetedStage kosong, loloskan semua stage untuk vendor tersebut.
                 const matchStage = targetedStage === "" || String(item.stage).trim() === targetedStage;
 
                 if (matchVendor && matchStage) {
                     item.status = scannedPos;
                     item.last_scan_time = timeStampString;
+                    
+                    // Suntik ISO Time String untuk keperluan kalkulasi durasi KPI Yard
+                    if (scannedPos === 'Gate In') item.time_gatein = isoString;
+                    if (scannedPos === 'Proses Muat') item.time_prosesmuat = isoString;
+                    if (scannedPos === 'Selesai Muat') item.time_selesaimuat = isoString;
+                    if (scannedPos === 'Gate Out') item.time_gateout = isoString;
+
                     updatedCount++;
                 }
                 return item;
@@ -166,7 +177,7 @@
                 return;
             }
 
-            localStorage.setItem('jotrans_data', JSON.stringify(appData));
+            localStorage.setItem(storageKey, JSON.stringify(appData));
             
             let successMsg = `✅ BERHASIL! Rombongan [${finalVendorName}]`;
             if (targetedStage !== "") successMsg += ` Stage [${targetedStage}]`;
