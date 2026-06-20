@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JO-TRANS - Smart Scanner Portal</title>
+    <title>JO-TRANS - Stage Scanner Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
@@ -11,8 +11,8 @@
 
     <!-- Header -->
     <header class="bg-gray-900 p-4 text-center border-b border-gray-800 shadow-md">
-        <h1 class="text-md font-bold tracking-widest text-blue-400">📲 VENDOR SCANNER PORTAL</h1>
-        <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp & Multi-Filter Input</p>
+        <h1 class="text-md font-bold tracking-widest text-blue-400">📲 STAGE SCANNER PORTAL</h1>
+        <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp by Stage Area Location</p>
     </header>
 
     <!-- Main Content -->
@@ -25,44 +25,29 @@
             </span>
         </div>
 
-        <!-- STEP 1: Filter Pengiriman (Ekspedisi & Stage) -->
+        <!-- STEP 1: Pilih Stage Area -->
         <div class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-lg space-y-3">
-            
-            <!-- Input Ekspedisi -->
             <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Pilih Nama Ekspedisi / Transporter</label>
-                <select id="select-vendor" onchange="toggleManualInput()" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-yellow-400 focus:outline-none focus:border-blue-500">
-                    <option value="">-- PILIH EKSPEDISI --</option>
-                    <option value="ELTRANS">ELTRANS</option>
-                    <option value="ABELLE BENEDIT SEJAHTERA (ABS)">ABELLE BENEDIT SEJAHTERA (ABS)</option>
-                    <option value="PT WIRA TRANS MANDIRI-">PT WIRA TRANS MANDIRI-</option>
-                    <option value="MAERSK">MAERSK</option>
-                    <option value="PT MATIO MULA JAYA-">PT MATIO MULA JAYA-</option>
-                    <option value="PT. HUMALA GIAT MANDIRI">PT. HUMALA GIAT MANDIRI</option>
-                    <option value="PT RESWARA PRIMA EXPRESS">PT RESWARA PRIMA EXPRESS</option>
-                    <option value="MANUAL_INPUT">LAINNYA (INPUT MANUAL)</option>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Pilih / Tentukan Nomor Stage</label>
+                <select id="select-stage" onchange="toggleManualStage()" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-yellow-400 focus:outline-none focus:border-blue-500">
+                    <option value="">-- PILIH NOMOR STAGE --</option>
+                    <option value="35">STAGE 35</option>
+                    <option value="37">STAGE 37</option>
+                    <option value="MANUAL_INPUT">INPUT STAGE MANUAL</option>
                 </select>
             </div>
 
-            <!-- Hidden Input Box untuk Ekspedisi Manual -->
-            <div id="manual-vendor-container" class="hidden">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nama Ekspedisi Baru</label>
-                <input type="text" id="input-vendor-manual" placeholder="Masukkan nama ekspedisi..." 
+            <!-- Hidden Input Box untuk Stage Manual jika tidak ada di list -->
+            <div id="manual-stage-container" class="hidden">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nomor Stage Baru</label>
+                <input type="text" id="input-stage-manual" placeholder="Masukkan nomor stage..." 
                        class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none focus:border-orange-500">
-            </div>
-
-            <!-- Input Stage Number -->
-            <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">2. Nomor Stage (Opsional)</label>
-                <input type="number" id="input-stage-number" placeholder="Contoh: 35 (Kosongkan jika semua stage)" 
-                       class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-blue-400 focus:outline-none focus:border-blue-500">
-                <p class="text-[10px] text-gray-500 mt-1 italic">*Kosongkan jika ingin meng-update semua nomor stage sekaligus.</p>
             </div>
         </div>
 
-        <!-- STEP 2: Kamera Box -->
+        <!-- STEP 2: Kamera Scanner -->
         <div class="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 shadow-lg flex flex-col items-center">
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">3. Scan Barcode Pos Gudang / Security</label>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">2. Scan Barcode Pos (Gate In / Muat / Selesai / Out)</label>
             <div id="reader" class="w-full bg-black rounded-lg overflow-hidden" style="max-width: 340px;"></div>
             <div id="scan-status" class="mt-3 text-xs font-medium text-gray-500 italic text-center animate-pulse">
                 Menghubungkan kamera...
@@ -75,17 +60,16 @@
     </main>
 
     <footer class="bg-gray-900 p-2 text-center text-[10px] text-gray-600 border-t border-gray-800">
-        JO-TRANS Automated Yard System v6.5
+        JO-TRANS Automated Yard System v6.6
     </footer>
 
     <script>
         const scanStatusText = document.getElementById('scan-status');
         const toastMsg = document.getElementById('toast-msg');
         const liveClock = document.getElementById('live-clock');
-        const selectVendor = document.getElementById('select-vendor');
-        const manualVendorContainer = document.getElementById('manual-vendor-container');
-        const inputVendorManual = document.getElementById('input-vendor-manual');
-        const inputStageNumber = document.getElementById('input-stage-number');
+        const selectStage = document.getElementById('select-stage');
+        const manualStageContainer = document.getElementById('manual-stage-container');
+        const inputStageManual = document.getElementById('input-stage-manual');
 
         // Jam Digital Real-time di Layar HP
         setInterval(() => {
@@ -93,13 +77,13 @@
             liveClock.innerText = `Waktu HP: ${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
         }, 1000);
 
-        function toggleManualInput() {
-            if (selectVendor.value === "MANUAL_INPUT") {
-                manualVendorContainer.classList.remove('hidden');
-                inputVendorManual.focus();
+        function toggleManualStage() {
+            if (selectStage.value === "MANUAL_INPUT") {
+                manualStageContainer.classList.remove('hidden');
+                inputStageManual.focus();
             } else {
-                manualVendorContainer.classList.add('hidden');
-                inputVendorManual.value = "";
+                manualStageContainer.classList.add('hidden');
+                inputStageManual.value = "";
             }
         }
 
@@ -107,24 +91,20 @@
             toastMsg.innerText = message;
             toastMsg.classList.remove('hidden', 'bg-emerald-600', 'bg-rose-600');
             toastMsg.classList.add(isSuccess ? 'bg-emerald-600' : 'bg-rose-600');
-            setTimeout(() => { toastMsg.classList.add('hidden'); }, 6000);
+            setTimeout(() => { toastMsg.classList.add('hidden'); }, 5000);
         }
 
-        // ENGINE SCAN UTAMA WITH TIME STAMP & STAGE FILTER (FIXED & LINKED)
-        function processSmartScan(scannedPos) {
-            // 1. Tentukan nama vendor yang dipakai
-            let finalVendorName = selectVendor.value;
-            if (finalVendorName === "MANUAL_INPUT") {
-                finalVendorName = inputVendorManual.value.trim().toUpperCase();
+        // ENGINE SCAN UTAMA BERDASARKAN STAGE AREA
+        function processStageScan(scannedPos) {
+            let finalStageName = selectStage.value;
+            if (finalStageName === "MANUAL_INPUT") {
+                finalStageName = inputStageManual.value.trim();
             }
 
-            if (!finalVendorName) {
-                showToast("⚠️ ERROR: Silakan pilih atau ketik nama ekspedisi terlebih dahulu!", false);
+            if (!finalStageName) {
+                showToast("⚠️ ERROR: Silakan tentukan nomor Stage terlebih dahulu!", false);
                 return;
             }
-
-            // 2. Ambil nilai Stage Number (jika diisi)
-            const targetedStage = inputStageNumber.value.trim();
 
             const validPositions = ["Gate In", "Proses Muat", "Selesai Muat", "Gate Out"];
             if (!validPositions.includes(scannedPos)) {
@@ -136,7 +116,7 @@
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
             const isoString = now.toISOString();
 
-            // SINKRONISASI LOGIKA STORAGE KEY BERDASARKAN TANGGAL AKTIF HARI INI
+            // Sinkronisasi data tanggal aktif hari ini
             const localDateStr = now.getFullYear() + '-' + 
                                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                                  String(now.getDate()).padStart(2, '0');
@@ -145,21 +125,17 @@
             let appData = JSON.parse(localStorage.getItem(storageKey)) || [];
 
             if (appData.length === 0) {
-                showToast(`⚠️ WARNING: Data dashboard tanggal [${localDateStr}] kosong. Silakan upload file CSV terlebih dahulu!`, false);
+                showToast(`⚠️ WARNING: Data dashboard tanggal [${localDateStr}] kosong. Silakan upload master CSV di Main Dashboard!`, false);
                 return;
             }
 
-            // 3. Update massal dengan filter Vendor + Stage
+            // Update data order secara massal yang memiliki nomor STAGE yang sama
             let updatedCount = 0;
             appData = appData.map(item => {
-                const matchVendor = item.transporter.toUpperCase() === finalVendorName.toUpperCase();
-                const matchStage = targetedStage === "" || String(item.stage).trim() === targetedStage;
-
-                if (matchVendor && matchStage) {
+                if (String(item.stage).trim() === finalStageName.trim()) {
                     item.status = scannedPos;
                     item.last_scan_time = timeStampString;
                     
-                    // Suntik ISO Time String untuk keperluan kalkulasi durasi KPI Yard
                     if (scannedPos === 'Gate In') item.time_gatein = isoString;
                     if (scannedPos === 'Proses Muat') item.time_prosesmuat = isoString;
                     if (scannedPos === 'Selesai Muat') item.time_selesaimuat = isoString;
@@ -171,31 +147,23 @@
             });
 
             if (updatedCount === 0) {
-                let msg = `ℹ️ Scan Sukses, tapi data tidak ditemukan untuk ekspedisi [${finalVendorName}]`;
-                if (targetedStage !== "") msg += ` dengan Stage [${targetedStage}]`;
-                showToast(msg, false);
+                showToast(`ℹ️ Scan Sukses, tapi tidak ada antrian order aktif di Stage [${finalStageName}] untuk hari ini.`, false);
                 return;
             }
 
             localStorage.setItem(storageKey, JSON.stringify(appData));
-            
-            let successMsg = `✅ BERHASIL! Rombongan [${finalVendorName}]`;
-            if (targetedStage !== "") successMsg += ` Stage [${targetedStage}]`;
-            successMsg += ` sebanyak ${updatedCount} Order diupdate ke [${scannedPos}]`;
-            
-            showToast(successMsg, true);
+            showToast(`✅ BERHASIL! Stage [${finalStageName}] sebanyak ${updatedCount} Order diupdate ke [${scannedPos}]`, true);
         }
 
-        // CAMERA CONTROL
         function onScanSuccess(decodedText, decodedResult) {
             html5QrcodeScanner.clear();
-            processSmartScan(decodedText.trim());
-            setTimeout(() => { startScanner(); }, 4000);
+            processStageScan(decodedText.trim());
+            setTimeout(() => { startScanner(); }, 3000);
         }
 
         let html5QrcodeScanner;
         function startScanner() {
-            scanStatusText.innerText = "📷 Kamera Siap. Arahkan ke Barcode Pos.";
+            scanStatusText.innerText = "📷 Kamera Siap. Scan Barcode Pos Checklist.";
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
                 fps: 15, 
                 qrbox: { width: 250, height: 250 },
