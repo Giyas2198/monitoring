@@ -3,184 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JO-TRANS - Enterprise Logistics Suite</title>
+    <title>JO-TRANS - Main Dashboard v4.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-[#f8f9fa] text-gray-900 antialiased min-h-screen flex">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex">
 
-    <aside class="w-64 bg-[#1e293b] text-slate-300 flex flex-col shrink-0 hidden md:flex border-r border-slate-800">
-        <div class="p-5 border-b border-slate-800 bg-[#0f172a]">
-            <h1 class="text-md font-bold tracking-wider text-white flex items-center gap-2">
-                <span>⚡</span> DASH UI - JO-TRANS
-            </h1>
-            <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest">Enterprise Analytics</p>
-        </div>
-
-        <div class="flex-1 p-4 space-y-6 overflow-y-auto">
-            <div>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-3">Main Dashboard</p>
-                <nav class="space-y-1">
-                    <button id="nav-yard" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left">
-                        <span>📊</span> Yard Monitoring
-                    </button>
-                </nav>
+    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between p-4 shrink-0">
+        <div class="space-y-6">
+            <div class="flex items-center gap-3 px-2">
+                <div class="bg-blue-600 text-white font-black p-2 rounded-lg text-lg tracking-wider">JO</div>
+                <div>
+                    <h2 class="text-sm font-black tracking-wide text-white">JO-TRANS</h2>
+                    <p class="text-[10px] text-slate-500 font-medium">Logistics Monitoring</p>
+                </div>
             </div>
-
-            <div>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-3">Advanced Modules</p>
-                <nav class="space-y-1">
-                    <button id="nav-warehouse" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left">
-                        <span>⏱️</span> Time in Warehouse
-                    </button>
-                    
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
-                        <span class="flex items-center gap-3">📍 Track Delivery</span>
-                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
-                    </div>
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
-                        <span class="flex items-center gap-3">🗄️ Master Data Transport</span>
-                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
-                    </div>
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
-                        <span class="flex items-center gap-3">🤖 Auto CS WhatsApp Blast</span>
-                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
-                    </div>
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
-                        <span class="flex items-center gap-3">🧾 Track DT & Surat Jalan</span>
-                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
-                    </div>
-                </nav>
-            </div>
+            
+            <nav class="space-y-1">
+                <button id="nav-yard" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left">
+                    📊 Yard Monitoring
+                </button>
+                <button id="nav-warehouse" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left">
+                    ⏱️ Time in Warehouse
+                </button>
+            </nav>
         </div>
-
-        <div class="p-4 border-t border-slate-800 bg-[#0f172a] text-center">
-            <p class="text-[10px] text-slate-500 font-mono">Connected User: Giyas</p>
+        <div class="px-2 text-[10px] text-slate-600 font-medium">
+            © Copyright Giyas 2026
         </div>
     </aside>
 
-    <div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+    <div class="flex-grow flex flex-col min-w-0">
         
-        <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm px-6 py-4 flex justify-between items-center">
+        <header class="bg-slate-950/50 border-b border-slate-800 p-4 flex justify-between items-center">
             <div>
-                <h2 id="page-title" class="text-md font-bold text-gray-900 tracking-tight">Yard Monitoring</h2>
-                <p id="page-desc" class="text-xs text-gray-400">Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.</p>
+                <h1 id="page-title" class="text-lg font-black text-white">Yard Monitoring</h1>
+                <p id="page-desc" class="text-xs text-slate-400">Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.</p>
             </div>
-            <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">Archive Storage Mode</span>
+            
+            <div class="flex items-center gap-3">
+                <input type="date" id="archive-date-picker" class="bg-slate-800 border border-slate-700 text-xs font-bold rounded-lg px-3 py-2 text-amber-400 focus:outline-none focus:border-blue-500">
+                <label for="csv-file" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg cursor-pointer transition">
+                    📁 Import Master CSV
+                </label>
+                <input type="file" id="csv-file" accept=".csv" class="hidden">
             </div>
         </header>
 
-        <div class="p-6 space-y-6 max-w-[1400px] w-full mx-auto">
+        <main class="p-6 flex-grow space-y-6 overflow-y-auto">
             
             <div id="view-yard-monitoring" class="space-y-6">
-                <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-yellow-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">OTW Muat (Booked)</p>
-                        <p id="count-otw" class="text-xl font-bold text-yellow-600 mt-1">0 Mobil</p>
+                
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">1. OTW MUAT</p>
+                        <h3 id="count-otw" class="text-xl font-black text-yellow-400 mt-1">0 Mobil</h3>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-blue-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gate In (Security)</p>
-                        <p id="count-gatein" class="text-xl font-bold text-blue-600 mt-1">0 Mobil</p>
+                    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">2. GATE IN</p>
+                        <h3 id="count-gatein" class="text-xl font-black text-blue-400 mt-1">0 Mobil</h3>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-orange-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Proses Muat</p>
-                        <p id="count-loading" class="text-xl font-bold text-orange-600 mt-1">0 Mobil</p>
+                    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">3. PROSES MUAT</p>
+                        <h3 id="count-loading" class="text-xl font-black text-orange-400 mt-1">0 Mobil</h3>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-purple-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Selesai Muat</p>
-                        <p id="count-loaded" class="text-xl font-bold text-purple-600 mt-1">0 Mobil</p>
+                    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">4. SELESAI MUAT</p>
+                        <h3 id="count-loaded" class="text-xl font-black text-purple-400 mt-1">0 Mobil</h3>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-green-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gate Out (On Delivery)</p>
-                        <p id="count-gateout" class="text-xl font-bold text-green- green-600 mt-1">0 Mobil</p>
+                    <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">5. GATE OUT</p>
+                        <h3 id="count-gateout" class="text-xl font-black text-emerald-400 mt-1">0 Mobil</h3>
                     </div>
-                </section>
+                </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <div class="lg:col-span-4 space-y-6">
-                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2">📂 Master Data Upload</h3>
-                            <p class="text-[11px] text-gray-400 mb-3">Impor data ke tanggal aktif yang dipilih.</p>
-                            <input type="file" id="csv-file" accept=".csv" 
-                                   class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition"/>
+                <div id="barcode-creator-board" class="bg-slate-950 border-2 border-dashed border-slate-800 rounded-2xl p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <h3 class="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                            <span>📲</span> LIVE STATION BARCODE GENERATOR (SCAN AREA)
+                        </h3>
+                        <span class="text-[10px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded-full font-mono font-bold">Ready to Scan</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-4 text-center">
+                        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center space-y-2">
+                            <span class="text-[10px] font-bold text-blue-400 uppercase font-mono">POS 1 - GATE IN</span>
+                            <div id="qr-gatein" class="bg-white p-2 rounded border border-gray-200"></div>
                         </div>
-
-                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm border-dashed border-blue-200">
-                            <h3 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1 flex items-center gap-2">🛠️ Barcode Hardware Emulator</h3>
-                            <p class="text-[11px] text-gray-400 mb-4">Scan otomatis mencatat log pada hari yang aktif.</p>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Customer Order ID</label>
-                                    <input type="text" id="scan-order-id" placeholder="CONTOH: W20155875" class="w-full p-2 border border-gray-200 rounded-lg text-xs font-semibold bg-gray-50 text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white uppercase transition">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Checkpoint Area</label>
-                                    <select id="scan-checkpoint" class="w-full p-2 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-700 focus:outline-none focus:border-blue-500 focus:bg-white transition">
-                                        <option value="Gate In">1. Pos Security - Gate In</option>
-                                        <option value="Proses Muat">2. Loket Gudang - Proses Muat</option>
-                                        <option value="Selesai Muat">3. Loket Gudang - Selesai Muat</option>
-                                        <option value="Gate Out">4. Pos Security - Gate Out</option>
-                                    </select>
-                                </div>
-                                <button id="btn-scan" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition">Submit Scan Log</button>
-                            </div>
+                        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center space-y-2">
+                            <span class="text-[10px] font-bold text-orange-400 uppercase font-mono">POS 2 - PROSES MUAT</span>
+                            <div id="qr-prosesmuat" class="bg-white p-2 rounded border border-gray-200"></div>
                         </div>
-                    </div>
-
-                    <div class="lg:col-span-8 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                        <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900">📋 Tracking Grid & KPI</h3>
-                                <div class="mt-1 flex items-center gap-1.5">
-                                    <span class="text-xs text-gray-400">Tanggal Aktif:</span>
-                                    <input type="date" id="archive-date-picker" class="border rounded px-2 py-0.5 text-xs font-bold text-blue-700 bg-blue-50 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button id="btn-reset-all" class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">🗑️ Clear Tanggal Ini</button>
-                                <button id="btn-upload-custom" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">📥 Upload Kolom Kustom</button>
-                                <button id="btn-add-column" class="bg-gray-900 text-white hover:bg-gray-800 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition shadow">+ Kolom</button>
-                            </div>
+                        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center space-y-2">
+                            <span class="text-[10px] font-bold text-purple-400 uppercase font-mono">POS 3 - SELESAI MUAT</span>
+                            <div id="qr-selesaimuat" class="bg-white p-2 rounded border border-gray-200"></div>
                         </div>
-
-                        <input type="file" id="custom-csv-file" accept=".csv" class="hidden">
-
-                        <div class="overflow-x-auto flex-1 max-h-[500px]">
-                            <table class="min-w-full text-[11px] text-left border-collapse">
-                                <thead class="bg-gray-50 text-gray-500 uppercase font-bold tracking-wider sticky top-0 border-b border-gray-200 z-10">
-                                    <tr id="table-header" class="divide-x divide-gray-100"></tr>
-                                </thead>
-                                <tbody id="table-body" class="divide-y divide-gray-100 bg-white">
-                                    </tbody>
-                            </table>
+                        <div class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center justify-center space-y-2">
+                            <span class="text-[10px] font-bold text-emerald-400 uppercase font-mono">POS 4 - GATE OUT</span>
+                            <div id="qr-gateout" class="bg-white p-2 rounded border border-gray-200"></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="view-time-warehouse" class="hidden space-y-4">
-                <section class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                        <div>
-                            <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">📋 Transporter Summary Performance Analytics</h3>
-                            <p class="text-[11px] text-gray-400">Total akumulasi durasi waktu rata-rata proses bongkar muat per vendor ekspedisi logistik.</p>
+                <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                    <div class="p-4 bg-slate-950/80 border-b border-slate-800 flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Antrian Logistics Yard List Data</h3>
+                        <div class="flex gap-2">
+                            <button id="btn-upload-custom" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-1.5 rounded-lg font-medium transition">Inject Kolom Kustom</button>
+                            <input type="file" id="custom-csv-file" accept=".csv" class="hidden">
+                            <button id="btn-add-column" class="bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 px-3 py-1.5 rounded-lg font-medium transition">+ Tambah Kolom Manual</button>
+                            <button id="btn-reset-all" class="bg-rose-950 hover:bg-rose-900 text-rose-400 border border-rose-900/50 text-xs px-3 py-1.5 rounded-lg font-medium transition">Reset Data</button>
                         </div>
-                        <div class="text-[10px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded border border-amber-200 uppercase tracking-wide">Live Warehouse KPI</div>
                     </div>
-                    
-                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                        <div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data muatan aktif untuk dianalisis pada hari ini.</div>
+
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr id="table-header" class="bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+                                    </tr>
+                            </thead>
+                            <tbody id="table-body" class="text-slate-300 divide-y divide-slate-800/50">
+                                </tbody>
+                        </table>
                     </div>
-                </section>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Manual Emulator Backup Input (Jika HP Mati)</h4>
+                    <div class="flex gap-3">
+                        <input type="text" id="scan-order-id" placeholder="Masukkan ID Order (Contoh: 1255474)" class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs w-full focus:outline-none focus:border-blue-500">
+                        <select id="scan-checkpoint" class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs focus:outline-none text-amber-400 font-bold">
+                            <option value="Gate In">Gate In</option>
+                            <option value="Proses Muat">Proses Muat</option>
+                            <option value="Selesai Muat">Selesai Muat</option>
+                            <option value="Gate Out">Gate Out</option>
+                        </select>
+                        <button id="btn-scan" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-2 rounded-lg transition shrink-0">Suntik Status</button>
+                    </div>
+                </div>
+
             </div>
 
-        </div>
+            <div id="view-time-warehouse" class="hidden space-y-6">
+                <div class="border-b border-slate-800 pb-2">
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">KPI Performa Rata-rata Durasi Transporter</h3>
+                </div>
+                <div id="transporter-perf-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+            </div>
+
+        </main>
     </div>
 
     <script src="app.js"></script>
