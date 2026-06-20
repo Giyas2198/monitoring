@@ -378,7 +378,7 @@ function renderDashboard() {
 }
 
 // ==========================================
-// SMART COUNTER ENGINE BASED ON TRUCK CAPACITY
+// SMART COUNTER ENGINE BASED ON STAGE & TRUCK CAPACITY
 // ==========================================
 function updateCounters() {
     const truckCapacities = {
@@ -402,7 +402,8 @@ function updateCounters() {
         }
 
         if (stageNum && status) {
-            const groupKey = `${stageNum}_${status}`;
+            // Kelompokkan unik berdasarkan Kombinasi Pintu Stage + Status Terkini + Jenis Truk
+            const groupKey = `${stageNum}_${status}_${truckType}`;
 
             if (!stageGroups[groupKey]) {
                 stageGroups[groupKey] = {
