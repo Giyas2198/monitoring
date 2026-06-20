@@ -3,80 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JO-TRANS - Driver Scanner Station v4.8</title>
-    <!-- Tailwind CSS CDN -->
+    <title>JO-TRANS - Stage Scanner Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HTML5 QR Code Library CDN -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between font-sans">
+<body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between">
 
-    <!-- HEADER STATION -->
-    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 shadow-md">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-black tracking-wider text-amber-400">JO-TRANS</h1>
-                <p class="text-xs text-slate-400">Driver Status Updater Station</p>
-            </div>
-            <div class="text-right">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
-                    ● Live Local Storage
-                </span>
-            </div>
-        </div>
+    <!-- Header -->
+    <header class="bg-gray-900 p-4 text-center border-b border-gray-800 shadow-md">
+        <h1 class="text-md font-bold tracking-widest text-blue-400">📲 STAGE SCANNER PORTAL</h1>
+        <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp by Stage Area Location</p>
     </header>
 
-    <!-- MAIN INTERFACE -->
-    <main class="flex-grow p-4 max-w-md mx-auto w-full space-y-4">
+    <!-- Main Content -->
+    <main class="p-4 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-4">
         
-        <!-- LIVE CLOCK & WARNING -->
-        <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl p-3 text-center">
-            <p id="live-clock" class="text-xs font-mono text-slate-400">Memuat waktu HP...</p>
+        <!-- Live Clock Info -->
+        <div class="text-center">
+            <span id="live-clock" class="bg-gray-800 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-mono border border-gray-700">
+                Memuat Jam Lokal HP...
+            </span>
         </div>
 
-        <!-- STAGE CONTROLLER CARD -->
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-xl space-y-4">
+        <!-- STEP 1: Pilih Stage Area -->
+        <div class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-lg space-y-3">
             <div>
-                <label for="select-stage" class="block text-sm font-bold text-slate-300 mb-2">
-                    📍 Tentukan Posisi STAGE Area Kerja:
-                </label>
-                <select id="select-stage" onchange="toggleManualStage()" class="w-full bg-slate-900 border-2 border-slate-700 rounded-xl p-3 text-lg font-bold text-amber-400 focus:outline-none focus:border-amber-400 transition-colors">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Pilih / Tentukan Nomor Stage</label>
+                <select id="select-stage" onchange="toggleManualStage()" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-yellow-400 focus:outline-none focus:border-blue-500">
+                    <option value="">-- PILIH NOMOR STAGE --</option>
                     <option value="35">STAGE 35</option>
                     <option value="37">STAGE 37</option>
-                    <option value="MANUAL_INPUT">-- Input Stage Manual --</option>
+                    <option value="MANUAL_INPUT">INPUT STAGE MANUAL</option>
                 </select>
             </div>
 
-            <!-- MANUAL INPUT (HIDDEN DEFAULT) -->
-            <div id="manual-stage-container" class="hidden animate-fadeIn">
-                <label for="input-stage-manual" class="block text-xs font-semibold text-slate-400 mb-1">
-                    Ketik Nomor Stage:
-                </label>
-                <input type="text" id="input-stage-manual" placeholder="Contoh: 36 atau STAGE 36" class="w-full bg-slate-900 border border-slate-600 rounded-xl p-2.5 font-mono text-slate-200 focus:outline-none focus:border-amber-400">
+            <!-- Hidden Input Box untuk Stage Manual jika tidak ada di list -->
+            <div id="manual-stage-container" class="hidden">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nomor Stage Baru</label>
+                <input type="text" id="input-stage-manual" placeholder="Masukkan nomor stage..." 
+                       class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none focus:border-orange-500">
             </div>
         </div>
 
-        <!-- CAMERA SCANNER CONTAINER -->
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl flex flex-col items-center p-4">
-            <div id="reader" class="w-full rounded-xl overflow-hidden border border-slate-700 bg-slate-950"></div>
-            <div class="mt-3 text-center">
-                <p id="scan-status" class="text-xs text-slate-400 font-mono">Mengaktifkan kamera...</p>
+        <!-- STEP 2: Kamera Scanner -->
+        <div class="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 shadow-lg flex flex-col items-center">
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">2. Scan Barcode Pos (Gate In / Muat / Selesai / Out)</label>
+            <div id="reader" class="w-full bg-black rounded-lg overflow-hidden" style="max-width: 340px;"></div>
+            <div id="scan-status" class="mt-3 text-xs font-medium text-gray-500 italic text-center animate-pulse">
+                Menghubungkan kamera...
             </div>
         </div>
 
-        <!-- TOAST NOTIFICATION WINDOW -->
-        <div id="toast-msg" class="hidden text-white font-bold p-4 rounded-xl shadow-2xl border text-sm text-center animate-bounce">
-            Notification Message Placeholder
-        </div>
+        <!-- Toast Notification Panel -->
+        <div id="toast-msg" class="hidden w-full p-4 rounded-xl text-center font-bold text-sm shadow-lg transition-all duration-300"></div>
 
     </main>
 
-    <!-- FOOTER LICENSE -->
-    <footer class="p-4 text-center text-xs text-slate-600 border-t border-slate-800 max-w-md mx-auto w-full">
-        <p>© Copyright Giyas 2026 | JO-TRANS System v4.8</p>
+    <footer class="bg-gray-900 p-2 text-center text-[10px] text-gray-600 border-t border-gray-800">
+        JO-TRANS Automated Yard System v6.6
     </footer>
 
-    <!-- ENGINE CODE LOGIC -->
     <script>
         const scanStatusText = document.getElementById('scan-status');
         const toastMsg = document.getElementById('toast-msg');
@@ -103,19 +89,12 @@
 
         function showToast(message, isSuccess) {
             toastMsg.innerText = message;
-            toastMsg.classList.remove('hidden', 'bg-emerald-600', 'bg-rose-600', 'border-emerald-500', 'border-rose-500');
-            
-            if (isSuccess) {
-                toastMsg.classList.add('bg-emerald-600', 'border-emerald-500');
-            } else {
-                toastMsg.classList.add('bg-rose-600', 'border-rose-500');
-            }
-            
-            // Diberi waktu 6 detik agar user sempat membaca status sukses/errornya
-            setTimeout(() => { toastMsg.classList.add('hidden'); }, 6000);
+            toastMsg.classList.remove('hidden', 'bg-emerald-600', 'bg-rose-600');
+            toastMsg.classList.add(isSuccess ? 'bg-emerald-600' : 'bg-rose-600');
+            setTimeout(() => { toastMsg.classList.add('hidden'); }, 5000);
         }
 
-        // ENGINE SCAN UTAMA BERDASARKAN STAGE AREA (DIOPTIMALKAN)
+        // ENGINE SCAN UTAMA BERDASARKAN NOMOR STAGE (FIXED)
         function processStageScan(scannedPos) {
             let finalStageName = selectStage.value;
             if (finalStageName === "MANUAL_INPUT") {
@@ -123,14 +102,13 @@
             }
 
             if (!finalStageName) {
-                showToast("⚠️ ERROR: Silakan tentukan nomor Stage terlebih dahulu di dropdown!", false);
+                showToast("⚠️ ERROR: Silakan tentukan nomor Stage terlebih dahulu!", false);
                 return;
             }
 
-            // Validasi isi teks barcode
             const validPositions = ["Gate In", "Proses Muat", "Selesai Muat", "Gate Out"];
             if (!validPositions.includes(scannedPos)) {
-                showToast(`⚠️ ERROR: Barcode salah! Terbaca: "${scannedPos}". Barcode harus berisi teks 'Gate In', 'Proses Muat', 'Selesai Muat', atau 'Gate Out'.`, false);
+                showToast(`⚠️ ERROR: Barcode tidak valid! Terbaca: "${scannedPos}"`, false);
                 return;
             }
 
@@ -138,7 +116,7 @@
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
             const isoString = now.toISOString();
 
-            // Ambil tanggal lokal hari ini format YYYY-MM-DD
+            // Ambil tanggal lokal perangkat (YYYY-MM-DD)
             const localDateStr = now.getFullYear() + '-' + 
                                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                                  String(now.getDate()).padStart(2, '0');
@@ -147,18 +125,14 @@
             let appData = JSON.parse(localStorage.getItem(storageKey)) || [];
 
             if (appData.length === 0) {
-                showToast(`⚠️ GAGAL UPDATE: Data dashboard tanggal [${localDateStr}] tidak ditemukan. Silakan upload file CSV di dashboard hari ini terlebih dahulu!`, false);
+                showToast(`⚠️ WARNING: Data dashboard tanggal [${localDateStr}] kosong. Upload master CSV dulu di Dashboard Utama!`, false);
                 return;
             }
 
-            // Jalankan sinkronisasi data (Toleransi case-insensitive & whitespace)
+            // Update massal data order yang memiliki nomor STAGE yang sama
             let updatedCount = 0;
             appData = appData.map(item => {
-                let csvStage = String(item.stage || '').trim().toUpperCase();
-                let selectedStageClean = String(finalStageName).trim().toUpperCase();
-
-                // COCOKKAN DATA: Jika sama persis, atau ada irisan (misal CSV berisi "35" dan Scanner bernilai "STAGE 35")
-                if (csvStage === selectedStageClean || csvStage.includes(selectedStageClean) || selectedStageClean.includes(csvStage)) {
+                if (String(item.stage).trim().toUpperCase() === finalStageName.trim().toUpperCase()) {
                     item.status = scannedPos;
                     item.last_scan_time = timeStampString;
                     
@@ -173,38 +147,31 @@
             });
 
             if (updatedCount === 0) {
-                showToast(`ℹ️ Scan terbaca [${scannedPos}], tapi TIDAK ADA order/truk aktif di Stage [${finalStageName}] pada dashboard hari ini [${localDateStr}].`, false);
+                showToast(`ℹ️ Scan Berhasil, tetapi tidak ada order aktif dengan Nomor Stage [${finalStageName}] hari ini.`, false);
                 return;
             }
 
-            // Simpan kembali data yang sudah di-update statusnya ke Local Storage
             localStorage.setItem(storageKey, JSON.stringify(appData));
-            showToast(`✅ BERHASIL! Stage [${finalStageName}] sebanyak ${updatedCount} Order otomatis diubah ke [${scannedPos}] pada ${timeStampString}`, true);
+            showToast(`✅ BERHASIL! Stage [${finalStageName}] sebanyak ${updatedCount} Order diupdate ke [${scannedPos}]`, true);
         }
 
-        // Penanganan anti-double scan berturut-turut tanpa mematikan modul kamera
-        let lastScanTime = 0;
         function onScanSuccess(decodedText, decodedResult) {
-            const currentTime = Date.now();
-            // Beri jeda/delay 3 detik antar scan barcode agar tidak ke-trigger berkali-kali
-            if (currentTime - lastScanTime > 3000) { 
-                lastScanTime = currentTime;
-                processStageScan(decodedText.trim());
-            }
+            html5QrcodeScanner.clear();
+            processStageScan(decodedText.trim());
+            setTimeout(() => { startScanner(); }, 3000);
         }
 
         let html5QrcodeScanner;
         function startScanner() {
-            scanStatusText.innerText = "📷 Kamera Aktif. Silakan scan Barcode Pos Status.";
+            scanStatusText.innerText = "📷 Kamera Siap. Scan Barcode Pos Checklist.";
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
                 fps: 15, 
-                qrbox: { width: 260, height: 260 },
+                qrbox: { width: 250, height: 250 },
                 rememberLastUsedCamera: true
             }, false);
             html5QrcodeScanner.render(onScanSuccess, (err) => {});
         }
 
-        // Otomatis jalankan scanner saat halaman selesai diload
         window.addEventListener('DOMContentLoaded', startScanner);
     </script>
 </body>
