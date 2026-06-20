@@ -9,61 +9,71 @@
 </head>
 <body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between">
 
-    <!-- Header -->
     <header class="bg-gray-900 p-4 text-center border-b border-gray-800 shadow-md">
         <h1 class="text-md font-bold tracking-widest text-blue-400">📲 STAGE SCANNER PORTAL</h1>
-        <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp by Stage Area Location</p>
+        <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp Cloud Sync System</p>
     </header>
 
-    <!-- Main Content -->
     <main class="p-4 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-4">
         
-        <!-- Live Clock Info -->
         <div class="text-center">
             <span id="live-clock" class="bg-gray-800 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-mono border border-gray-700">
-                Memuat Jam Lokal HP...
+                Menghubungkan Jam...
             </span>
         </div>
 
-        <!-- STEP 1: Pilih Stage Area -->
         <div class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-lg space-y-3">
             <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Pilih / Tentukan Nomor Stage</label>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Tentukan Nomor Stage Lapangan</label>
                 <select id="select-stage" onchange="toggleManualStage()" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-yellow-400 focus:outline-none focus:border-blue-500">
                     <option value="">-- PILIH NOMOR STAGE --</option>
                     <option value="35">STAGE 35</option>
                     <option value="37">STAGE 37</option>
+                    <option value="40">STAGE 40</option>
                     <option value="MANUAL_INPUT">INPUT STAGE MANUAL</option>
                 </select>
             </div>
 
-            <!-- Hidden Input Box untuk Stage Manual jika tidak ada di list -->
             <div id="manual-stage-container" class="hidden">
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nomor Stage Baru</label>
-                <input type="text" id="input-stage-manual" placeholder="Masukkan nomor stage..." 
-                       class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none focus:border-orange-500">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nomor Stage Manual</label>
+                <input type="text" id="input-stage-manual" placeholder="Contoh: 41" 
+                       class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none">
             </div>
         </div>
 
-        <!-- STEP 2: Kamera Scanner -->
         <div class="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 shadow-lg flex flex-col items-center">
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">2. Scan Barcode Pos (Gate In / Muat / Selesai / Out)</label>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">2. Bidik Kamera Ke Barcode Checkpoint</label>
             <div id="reader" class="w-full bg-black rounded-lg overflow-hidden" style="max-width: 340px;"></div>
-            <div id="scan-status" class="mt-3 text-xs font-medium text-gray-500 italic text-center animate-pulse">
-                Menghubungkan kamera...
+            <div id="scan-status" class="mt-3 text-xs text-gray-500 italic text-center">
+                Mempersiapkan modul kamera...
             </div>
         </div>
 
-        <!-- Toast Notification Panel -->
-        <div id="toast-msg" class="hidden w-full p-4 rounded-xl text-center font-bold text-sm shadow-lg transition-all duration-300"></div>
+        <div id="toast-msg" class="hidden w-full p-4 rounded-xl text-center font-bold text-sm shadow-lg"></div>
 
     </main>
 
     <footer class="bg-gray-900 p-2 text-center text-[10px] text-gray-600 border-t border-gray-800">
-        JO-TRANS Automated Yard System v6.6
+        JO-TRANS Automated Cloud System v6.6
     </footer>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Config asli dari berkas screenshot kamu
+        const firebaseConfig = {
+          apiKey: "AIzaSyAs_F8Zf9VqBf1_U7pU_yZ4OQ_R7Z6O8Q",
+          authDomain: "jo-trans-a7a2a.firebaseapp.com",
+          projectId: "jo-trans-a7a2a",
+          storageBucket: "jo-trans-a7a2a.appspot.com",
+          messagingSenderId: "591963032588",
+          appId: "1:591963032588:web:75e8ef68c37466dc7e366a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         const scanStatusText = document.getElementById('scan-status');
         const toastMsg = document.getElementById('toast-msg');
         const liveClock = document.getElementById('live-clock');
@@ -71,13 +81,12 @@
         const manualStageContainer = document.getElementById('manual-stage-container');
         const inputStageManual = document.getElementById('input-stage-manual');
 
-        // Jam Digital Real-time di Layar HP
         setInterval(() => {
             const now = new Date();
             liveClock.innerText = `Waktu HP: ${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
         }, 1000);
 
-        function toggleManualStage() {
+        window.toggleManualStage = function() {
             if (selectStage.value === "MANUAL_INPUT") {
                 manualStageContainer.classList.remove('hidden');
                 inputStageManual.focus();
@@ -94,21 +103,17 @@
             setTimeout(() => { toastMsg.classList.add('hidden'); }, 5000);
         }
 
-        // ENGINE SCAN UTAMA BERDASARKAN NOMOR STAGE (FIXED)
-        function processStageScan(scannedPos) {
-            let finalStageName = selectStage.value;
-            if (finalStageName === "MANUAL_INPUT") {
-                finalStageName = inputStageManual.value.trim();
-            }
+        async function processStageScan(scannedPos) {
+            let finalStageName = selectStage.value === "MANUAL_INPUT" ? inputStageManual.value.trim() : selectStage.value;
 
             if (!finalStageName) {
-                showToast("⚠️ ERROR: Silakan tentukan nomor Stage terlebih dahulu!", false);
+                showToast("⚠️ ERROR: Tentukan nomor Stage dulu!", false);
                 return;
             }
 
             const validPositions = ["Gate In", "Proses Muat", "Selesai Muat", "Gate Out"];
             if (!validPositions.includes(scannedPos)) {
-                showToast(`⚠️ ERROR: Barcode tidak valid! Terbaca: "${scannedPos}"`, false);
+                showToast(`⚠️ Barcode Salah: "${scannedPos}"`, false);
                 return;
             }
 
@@ -116,43 +121,49 @@
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
             const isoString = now.toISOString();
 
-            // Ambil tanggal lokal perangkat (YYYY-MM-DD)
-            const localDateStr = now.getFullYear() + '-' + 
-                                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                                 String(now.getDate()).padStart(2, '0');
-            const storageKey = `jotrans_data_${localDateStr}`;
+            const localDateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const docRef = doc(db, "jotrans_records", localDateStr);
 
-            let appData = JSON.parse(localStorage.getItem(storageKey)) || [];
+            try {
+                scanStatusText.innerText = "⏳ Sinkronisasi Cloud...";
+                const docSnap = await getDoc(docRef);
 
-            if (appData.length === 0) {
-                showToast(`⚠️ WARNING: Data dashboard tanggal [${localDateStr}] kosong. Upload master CSV dulu di Dashboard Utama!`, false);
-                return;
-            }
-
-            // Update massal data order yang memiliki nomor STAGE yang sama
-            let updatedCount = 0;
-            appData = appData.map(item => {
-                if (String(item.stage).trim().toUpperCase() === finalStageName.trim().toUpperCase()) {
-                    item.status = scannedPos;
-                    item.last_scan_time = timeStampString;
-                    
-                    if (scannedPos === 'Gate In') item.time_gatein = isoString;
-                    if (scannedPos === 'Proses Muat') item.time_prosesmuat = isoString;
-                    if (scannedPos === 'Selesai Muat') item.time_selesaimuat = isoString;
-                    if (scannedPos === 'Gate Out') item.time_gateout = isoString;
-
-                    updatedCount++;
+                if (!docSnap.exists()) {
+                    showToast(`⚠️ Data tanggal [${localDateStr}] belum di-upload di laptop.`, false);
+                    scanStatusText.innerText = "📷 Kamera Siap.";
+                    return;
                 }
-                return item;
-            });
 
-            if (updatedCount === 0) {
-                showToast(`ℹ️ Scan Berhasil, tetapi tidak ada order aktif dengan Nomor Stage [${finalStageName}] hari ini.`, false);
-                return;
+                let appData = docSnap.data().orders || [];
+                let updatedCount = 0;
+
+                appData = appData.map(item => {
+                    if (String(item.stage).trim() === finalStageName.trim()) {
+                        item.status = scannedPos;
+                        item.last_scan_time = timeStampString;
+                        if (scannedPos === 'Gate In') item.time_gatein = isoString;
+                        if (scannedPos === 'Proses Muat') item.time_prosesmuat = isoString;
+                        if (scannedPos === 'Selesai Muat') item.time_selesaimuat = isoString;
+                        if (scannedPos === 'Gate Out') item.time_gateout = isoString;
+                        updatedCount++;
+                    }
+                    return item;
+                });
+
+                if (updatedCount === 0) {
+                    showToast(`ℹ️ Cocok, tapi tak ada antrian order di Stage [${finalStageName}] hari ini.`, false);
+                    scanStatusText.innerText = "📷 Kamera Siap.";
+                    return;
+                }
+
+                await updateDoc(docRef, { orders: appData });
+                showToast(`✅ CLOUD UPDATED! Stage [${finalStageName}] -> [${scannedPos}] (${updatedCount} Order)`, true);
+
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Gagal terhubung ke Firebase Cloud.", false);
             }
-
-            localStorage.setItem(storageKey, JSON.stringify(appData));
-            showToast(`✅ BERHASIL! Stage [${finalStageName}] sebanyak ${updatedCount} Order diupdate ke [${scannedPos}]`, true);
+            scanStatusText.innerText = "📷 Kamera Siap.";
         }
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -163,7 +174,7 @@
 
         let html5QrcodeScanner;
         function startScanner() {
-            scanStatusText.innerText = "📷 Kamera Siap. Scan Barcode Pos Checklist.";
+            scanStatusText.innerText = "📷 Kamera Siap. Bidik Barcode Checkpoint.";
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
                 fps: 15, 
                 qrbox: { width: 250, height: 250 },
