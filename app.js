@@ -543,3 +543,30 @@ function saveToStorage() {
     const key = `jotrans_data_${selectedDate}`;
     localStorage.setItem(key, JSON.stringify(appData));
 }
+
+// ===================================================
+// AUTOMATED QR CODE GENERATOR FOR DRIVER SCAN PORTAL
+// ===================================================
+let qrGateIn, qrProsesMuat, qrSelesaiMuat, qrGateOut;
+
+function generateStaticBarcodes() {
+    // Bersihkan kontainer QR lama agar tidak menumpuk saat dirender ulang
+    document.getElementById("qr-gatein").innerHTML = "";
+    document.getElementById("qr-prosesmuat").innerHTML = "";
+    document.getElementById("qr-selesaimuat").innerHTML = "";
+    document.getElementById("qr-gateout").innerHTML = "";
+
+    // Generate QR Code Baru berukuran 130x130 piksel
+    qrGateIn = new QRCode(document.getElementById("qr-gatein"), { text: "Gate In", width: 130, height: 130, colorDark: "#020617", colorLight: "#ffffff" });
+    qrProsesMuat = new QRCode(document.getElementById("qr-prosesmuat"), { text: "Proses Muat", width: 130, height: 130, colorDark: "#020617", colorLight: "#ffffff" });
+    qrSelesaiMuat = new QRCode(document.getElementById("qr-selesaimuat"), { text: "Selesai Muat", width: 130, height: 130, colorDark: "#020617", colorLight: "#ffffff" });
+    qrGateOut = new QRCode(document.getElementById("qr-gateout"), { text: "Gate Out", width: 130, height: 130, colorDark: "#020617", colorLight: "#ffffff" });
+}
+
+// Suntikkan pemanggilan generator QR ke dalam core render function bawaan app.js
+const originalRenderDashboard = renderDashboard;
+renderDashboard = function() {
+    originalRenderDashboard();
+    // Jalankan auto-create QR setiap kali dashboard melakukan refresh data
+    generateStaticBarcodes();
+};
