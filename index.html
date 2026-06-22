@@ -7,12 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -24,155 +18,115 @@
             <h1 class="text-md font-bold tracking-wider text-white flex items-center gap-2">
                 <span>⚡</span> DASH UI - JO-TRANS
             </h1>
-            <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest">Enterprise Analytics</p>
+            <p class="text-[10px] text-slate-400 font-medium tracking-wide mt-1 uppercase">PT JOTUN INDONESIA</p>
         </div>
-
-        <div class="flex-1 p-4 space-y-6 overflow-y-auto">
-            <div>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-3">Main Dashboard</p>
-                <nav class="space-y-1">
-                    <button id="nav-yard" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left">
-                        <span>📊</span> Yard Monitoring
-                    </button>
-                </nav>
-            </div>
-
-            <div>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-3">Advanced Modules</p>
-                <nav class="space-y-1">
-                    <button id="nav-warehouse" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left">
-                        <span>⏱️</span> Time in Warehouse
-                    </button>
-                    
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
-                        <span class="flex items-center gap-3">📍 Track Delivery</span>
-                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
-                    </div>
-                </nav>
-            </div>
-        </div>
-
-        <div class="p-4 border-t border-slate-800 bg-[#0f172a] text-center">
-            <p class="text-[10px] text-slate-500 font-mono">Connected User: Giyas</p>
+        <nav class="flex-1 p-4 space-y-1.5">
+            <button id="nav-yard" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs transition text-left">
+                📊 Yard Monitoring
+            </button>
+            <button id="nav-warehouse" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-medium text-xs transition text-left">
+                ⏱️ Time in Warehouse (KPI)
+            </button>
+        </nav>
+        <div class="p-4 border-t border-slate-800 bg-[#0f172a] text-center text-[10px] text-slate-500">
+            v2.1 Cloud Active (Firestore)
         </div>
     </aside>
 
     <div class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         
-        <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm px-6 py-4 flex justify-between items-center">
+        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shrink-0 shadow-sm">
             <div>
-                <h2 id="page-title" class="text-md font-bold text-gray-900 tracking-tight">Yard Monitoring</h2>
-                <p id="page-desc" class="text-xs text-gray-400">Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.</p>
+                <h2 id="page-title" class="text-sm font-bold text-gray-900">Yard Monitoring</h2>
+                <p id="page-desc" class="text-[11px] text-gray-400">Monitoring real-time aktivitas truk logistik PT Jotun Indonesia.</p>
             </div>
-            <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">Firebase Realtime Mode</span>
+            
+            <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
+                <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Tanggal:</label>
+                <input type="date" id="archive-date-picker" class="bg-transparent border-none text-xs font-semibold text-gray-700 focus:outline-none">
             </div>
         </header>
 
-        <div class="p-6 space-y-6 max-w-[1400px] w-full mx-auto">
+        <div class="flex-1 p-6 space-y-6 overflow-y-auto">
             
             <div id="view-yard-monitoring" class="space-y-6">
-                <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-yellow-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">OTW Muat (Booked)</p>
-                        <p id="count-otw" class="text-xl font-bold text-yellow-600 mt-1">0 Mobil</p>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">1. OTW Muat</span>
+                        <span id="count-otw" class="text-xl font-extrabold text-slate-800 mt-2 font-mono">0 Mobil</span>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-blue-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gate In (Security)</p>
-                        <p id="count-gatein" class="text-xl font-bold text-blue-600 mt-1">0 Mobil</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-blue-500">
+                        <span class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">2. Gate In</span>
+                        <span id="count-gatein" class="text-xl font-extrabold text-blue-600 mt-2 font-mono">0 Mobil</span>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-orange-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Proses Muat</p>
-                        <p id="count-loading" class="text-xl font-bold text-orange-600 mt-1">0 Mobil</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-orange-500">
+                        <span class="text-[10px] text-orange-500 font-bold uppercase tracking-wider">3. Proses Muat</span>
+                        <span id="count-loading" class="text-xl font-extrabold text-orange-600 mt-2 font-mono">0 Mobil</span>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-purple-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Selesai Muat</p>
-                        <p id="count-loaded" class="text-xl font-bold text-purple-600 mt-1">0 Mobil</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-purple-500">
+                        <span class="text-[10px] text-purple-500 font-bold uppercase tracking-wider">4. Selesai Muat</span>
+                        <span id="count-loaded" class="text-xl font-extrabold text-purple-600 mt-2 font-mono">0 Mobil</span>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm border-l-4 border-green-500">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gate Out (On Delivery)</p>
-                        <p id="count-gateout" class="text-xl font-bold text-green-600 mt-1">0 Mobil</p>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-green-500">
+                        <span class="text-[10px] text-green-500 font-bold uppercase tracking-wider">5. Gate Out</span>
+                        <span id="count-gateout" class="text-xl font-extrabold text-green-600 mt-2 font-mono">0 Mobil</span>
                     </div>
-                </section>
+                </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <div class="lg:col-span-4 space-y-6">
-                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2">📂 Master Data Upload</h3>
-                            <p class="text-[11px] text-gray-400 mb-3">Impor data ke tanggal aktif yang dipilih.</p>
-                            <input type="file" id="csv-file" accept=".csv" 
-                                   class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition"/>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">📂 Import Master Schedule (CSV)</h3>
+                            <p class="text-[11px] text-gray-400 mt-0.5">Upload data logistik harian untuk di-push ke cloud Firestore.</p>
                         </div>
+                        <input type="file" id="csv-file" accept=".csv" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    </div>
 
-                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-emerald-500">
-                            <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1 flex items-center gap-2">🖨️ QR Code Stage Generator</h3>
-                            <p class="text-[11px] text-gray-400 mb-4">Pilih Order ID untuk memunculkan Barcode / QR Pos Driver.</p>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Pilih Active Order ID</label>
-                                    <select id="qr-select-order" class="w-full p-2 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-700 font-semibold focus:outline-none focus:border-emerald-500 focus:bg-white transition">
-                                        <option value="">-- BELUM ADA DATA ORDER --</option>
-                                    </select>
-                                </div>
-                                <button id="btn-generate-qr" class="w-full bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition">Generate QR Code</button>
-                                
-                                <div class="flex flex-col items-center justify-center pt-2">
-                                    <div id="qrcode-output" class="p-3 bg-white border border-gray-200 rounded-xl shadow-inner min-h-[150px] min-w-[150px] flex items-center justify-center text-center text-[10px] text-gray-400 italic">QR Code Muncul di Sini</div>
-                                    <p id="qr-label-under" class="text-xs font-bold font-mono text-gray-700 mt-2 text-center"></p>
-                                </div>
-                            </div>
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3 lg:col-span-2">
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🕹️ Admin Scan Emulator</h3>
+                            <p class="text-[11px] text-gray-400 mt-0.5">Simulasi input scanner manual langsung dari sisi admin.</p>
                         </div>
-
-                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm border-dashed border-blue-200">
-                            <h3 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1 flex items-center gap-2">🛠️ Barcode Hardware Emulator</h3>
-                            <p class="text-[11px] text-gray-400 mb-4">Scan otomatis mencatat log pada hari yang aktif.</p>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Customer Order ID</label>
-                                    <input type="text" id="scan-order-id" placeholder="CONTOH: W20155875" class="w-full p-2 border border-gray-200 rounded-lg text-xs font-semibold bg-gray-50 text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white uppercase transition">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">Checkpoint Area</label>
-                                    <select id="scan-checkpoint" class="w-full p-2 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-700 focus:outline-none focus:border-blue-500 focus:bg-white transition">
-                                        <option value="Gate In">1. Pos Security - Gate In</option>
-                                        <option value="Proses Muat">2. Loket Gudang - Proses Muat</option>
-                                        <option value="Selesai Muat">3. Loket Gudang - Selesai Muat</option>
-                                        <option value="Gate Out">4. Pos Security - Gate Out</option>
-                                    </select>
-                                </div>
-                                <button id="btn-scan" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition">Submit Scan Log</button>
-                            </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input type="text" id="scan-order-id" placeholder="Ketik Order ID..." class="p-2 border rounded-lg text-xs font-bold bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase">
+                            <select id="scan-checkpoint" class="p-2 border rounded-lg text-xs font-semibold bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option value="Gate In">Gate In</option>
+                                <option value="Proses Muat">Proses Muat</option>
+                                <option value="Selesai Muat">Selesai Muat</option>
+                                <option value="Gate Out">Gate Out</option>
+                            </select>
+                            <button id="btn-scan" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow-sm">
+                                Trigger Checkpoint
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <div class="lg:col-span-8 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                        <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-900">📋 Tracking Grid & KPI</h3>
-                                <div class="mt-1 flex items-center gap-1.5">
-                                    <span class="text-xs text-gray-400">Tanggal Aktif:</span>
-                                    <input type="date" id="archive-date-picker" class="border rounded px-2 py-0.5 text-xs font-bold text-blue-700 bg-blue-50 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button id="btn-save-firebase" class="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">💾 Save to Firebase</button>
-                                <button id="btn-reset-all" class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">🗑️ Clear Tanggal Ini</button>
-                                <button id="btn-upload-custom" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition">📥 Upload Kolom Kustom</button>
-                                <button id="btn-add-column" class="bg-gray-900 text-white hover:bg-gray-800 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition shadow">+ Kolom</button>
-                            </div>
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-wrap gap-2">
+                        <span class="text-xs font-bold text-gray-800 uppercase tracking-wider">📋 Live Delivery Tracking Rows</span>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-add-column" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold text-[11px] py-1.5 px-3 rounded-lg transition shadow-sm">
+                                ➕ Tambah Kolom Manual
+                            </button>
+                            <button id="btn-reset-all" class="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-[11px] py-1.5 px-3 rounded-lg transition">
+                                🗑️ Clear Data Hari Ini
+                            </button>
                         </div>
-
-                        <input type="file" id="custom-csv-file" accept=".csv" class="hidden">
-
-                        <div class="overflow-x-auto flex-1 max-h-[500px]">
-                            <table class="min-w-full text-[11px] text-left border-collapse">
-                                <thead class="bg-gray-50 text-gray-500 uppercase font-bold tracking-wider sticky top-0 border-b border-gray-200 z-10">
-                                    <tr id="table-header" class="divide-x divide-gray-100"></tr>
-                                </thead>
-                                <tbody id="table-body" class="divide-y divide-gray-100 bg-white"></tbody>
-                            </table>
-                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[1000px]">
+                            <thead>
+                                <tr id="table-header" class="bg-gray-100 border-b border-gray-200 text-gray-600 text-[10px] uppercase tracking-wider">
+                                    </tr>
+                            </thead>
+                            <tbody id="table-body" class="divide-y divide-gray-200 text-gray-700">
+                                <tr>
+                                    <td colspan="12" class="text-center p-12 text-gray-400 italic font-medium">Memuat data dari cloud Firebase...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -186,16 +140,14 @@
                         </div>
                         <div class="text-[10px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded border border-amber-200 uppercase tracking-wide">Live Warehouse KPI</div>
                     </div>
-                    
-                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                        <div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data muatan aktif untuk dianalisis pada hari ini.</div>
-                    </div>
+                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        </div>
                 </section>
             </div>
 
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
