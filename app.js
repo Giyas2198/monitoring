@@ -1,7 +1,6 @@
 // ==========================================
 // FIREBASE INITIALIZATION & CONFIGURATION
 // ==========================================
-// SILAKAN GANTI DENGAN CONFIG ASLI DARI FIREBASE CONSOLE ANDA
 const firebaseConfig = {
     apiKey: "AIzaSyYourRealApiKeyHere_xxxxxxxx",
     authDomain: "jo-trans-project.firebaseapp.com",
@@ -12,7 +11,6 @@ const firebaseConfig = {
     appId: "1:123456:web:abcd1234"
 };
 
-// Mencegah error re-inisialisasi
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
@@ -71,6 +69,7 @@ const tableBody = document.getElementById('table-body');
 const btnAddColumn = document.getElementById('btn-add-column');
 const btnResetAll = document.getElementById('btn-reset-all');
 const btnUploadCustom = document.getElementById('btn-upload-custom');
+const btnSaveFirebase = document.getElementById('btn-save-firebase'); // Element Tombol Baru
 const datePicker = document.getElementById('archive-date-picker');
 
 const scanOrderId = document.getElementById('scan-order-id');
@@ -85,18 +84,27 @@ document.addEventListener('DOMContentLoaded', () => {
     syncWithFirebase(selectedDate);
 });
 
-// SYNC REALTIME DENGAN FIREBASE DB (PENGGANTI LOCALSTORAGE)
+// SINKRONISASI AKTIF DUA ARAH DENGAN FIREBASE
 let firebaseListenerRef = null;
 function syncWithFirebase(dateStr) {
     if (firebaseListenerRef) {
-        firebaseListenerRef.off(); // Matikan listener tanggal sebelumnya jika ada
+        firebaseListenerRef.off(); 
     }
 
     firebaseListenerRef = db.ref(`jotrans_data/${dateStr}`);
     firebaseListenerRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        // Firebase menyimpan objek asosiatif atau array. Kita konversi ke Array murni agar aman dirender
-        appData = data ? Object.values(data) : [];
+        if (data) {
+            // Jika data di firebase berbentuk objek/key-value, ubah ke array agar fungsi render aman
+            appData = Object.keys(data).map(key => {
+                if (typeof data[key] === 'object' && data[key] !== null) {
+                    return { firebaseKey: key, ...data[key] };
+                }
+                return data[key];
+            });
+        } else {
+            appData = [];
+        }
         renderDashboard();
     }, (error) => {
         console.error("Firebase Sync Error:", error);
@@ -110,9 +118,44 @@ if (datePicker) {
     });
 }
 
+// FUNGSI UNTUK MENEMBAK DATA KE FIREBASE (DIKONTROL TOMBOL & AKSI)
 function pushDataToFirebase() {
-    db.ref(`jotrans_data/${selectedDate}`).set(appData);
+    // Kita simpan dalam format objek terstruktur berdasarkan Order ID agar driver mudah melakukan update secara spesifik
+    const dataToSave = {};
+    appData.forEach(item => {
+        if (item.id) {
+            const cleanKey = item.id.replace(/[.#$\[\]]/g, "_"); // Bersihkan karakter ilegal firebase key
+            dataToSave[cleanKey] = {
+                id: item.id,
+                transporter: item.transporter || '',
+                stage: item.stage || '-',
+                customerName: item.customerName || '-',
+                shipTo: item.shipTo || '-',
+                volume: item.volume || '0',
+                truckType: item.truckType || '-',
+                status: item.status || 'OTW Muat',
+                last_scan_time: item.last_scan_time || '',
+                time_otw: item.time_otw || '',
+                time_gatein: item.time_gatein || '',
+                time_prosesmuat: item.time_prosesmuat || '',
+                time_selesaimuat: item.time_selesaimuat || '',
+                time_gateout: item.time_gateout || ''
+            };
+            // Masukkan kolom kustom jika ada
+            customColumns.forEach(col => {
+                const lowerCol = col.toLowerCase();
+                dataToSave[cleanKey][lowerCol] = item[lowerCol] || '';
+            });
+        }
+    });
+
+    db.ref(`jotrans_data/${selectedDate}`).set(dataToSave)
+        .then(() => { alert(`⚡ Sukses menyimpan data aktif ke Firebase untuk tanggal ${selectedDate}!`); })
+        .catch((err) => { alert("❌ Gagal Menyimpan ke Firebase: " + err.message); });
 }
+
+// Listener Event klik Tombol Save Firebase Manual
+btnSaveFirebase.addEventListener('click', pushDataToFirebase);
 
 // ==========================================
 // CORE WORKFLOW: RAW MASTER CSV UPLOAD
@@ -167,9 +210,9 @@ function processRawData(rawRows) {
     });
 
     appData = parsedData; 
-    pushDataToFirebase(); // push ke cloud
+    renderDashboard(); // Render ke tabel lokal dulu agar user bisa review
     fileInput.value = "";
-    alert(`Berhasil mengimpor ${appData.length} data ke Firebase tanggal: ${selectedDate}!`);
+    alert(`⚠️ Data CSV berhasil dimuat ke tabel lokal (${appData.length} baris). SILAKAN KLIK TOMBOL 'SAVE TO FIREBASE' UNTUK SUBMIT KE CLOUD!`);
 }
 
 // ==========================================
