@@ -32,6 +32,7 @@ let appData = [];
 let customColumns = JSON.parse(localStorage.getItem('jotrans_columns')) || [];
 let unsubscribeFirestore = null; 
 
+// Elemen Navigasi Tab Menu
 const navYardBtn = document.getElementById('nav-yard');
 const navWarehouseBtn = document.getElementById('nav-warehouse');
 const viewYardMonitoring = document.getElementById('view-yard-monitoring');
@@ -60,7 +61,7 @@ function switchPage(target) {
 if(navYardBtn) navYardBtn.addEventListener('click', () => switchPage('yard'));
 if(navWarehouseBtn) navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
 
-// CORE ELEMENT DEFINITIONS
+// CORE ELEMENT SELECTION
 const fileInput = document.getElementById('csv-file');
 const tableHeader = document.getElementById('table-header');
 const tableBody = document.getElementById('table-body');
@@ -72,14 +73,20 @@ const scanOrderId = document.getElementById('scan-order-id');
 const scanCheckpoint = document.getElementById('scan-checkpoint');
 const btnScan = document.getElementById('btn-scan');
 
+// ELEMEN INPUT INTERAKTIF FILTRASI EXCEL
+const searchGlobal = document.getElementById('search-global');
+const filterTransporter = document.getElementById('filter-transporter');
+const filterStage = document.getElementById('filter-stage');
+const filterTruck = document.getElementById('filter-truck');
+const filterStatus = document.getElementById('filter-status');
+
 document.addEventListener('DOMContentLoaded', () => {
     if (datePicker) {
         datePicker.value = selectedDate;
     }
     listenToFirestore(selectedDate);
-    
-    // AKTIFKAN HANDLER DROPDOWN BARCODE CLOSE-UP
     initBarcodeDropdown();
+    initExcelFilterListeners();
 });
 
 function initBarcodeDropdown() {
@@ -97,7 +104,6 @@ function initBarcodeDropdown() {
         }
 
         container.classList.remove('hidden');
-        
         if (val === "Gate In") titleText.className = "text-xs font-extrabold text-blue-600 uppercase tracking-widest mb-3";
         if (val === "Proses Muat") titleText.className = "text-xs font-extrabold text-orange-600 uppercase tracking-widest mb-3";
         if (val === "Selesai Muat") titleText.className = "text-xs font-extrabold text-purple-600 uppercase tracking-widest mb-3";
@@ -105,18 +111,48 @@ function initBarcodeDropdown() {
         
         titleText.innerText = `🎯 BARCODE TARGET: ${val}`;
 
-        // Konfigurasi Close-Up Super Renggang (width: 3, height: 90) agar HP mudah memindai
         JsBarcode("#master-barcode-canvas", val, {
-            format: "CODE128",
-            width: 3,
-            height: 90,
-            displayValue: true,
-            fontSize: 13,
-            fontOptions: "bold",
-            background: "#ffffff",
-            lineColor: "#000000"
+            format: "CODE128", width: 3, height: 90, displayValue: true, fontSize: 13, fontOptions: "bold", background: "#ffffff", lineColor: "#000000"
         });
     });
+}
+
+// MANAGEMENT LIVE INTERACTIVE EXCEL FILTER LISTENERS
+function initExcelFilterListeners() {
+    const triggerRender = () => { renderTableBody(); };
+    
+    if(searchGlobal) searchGlobal.addEventListener('input', triggerRender);
+    if(filterTransporter) filterTransporter.addEventListener('change', triggerRender);
+    if(filterStage) filterStage.addEventListener('change', triggerRender);
+    if(filterTruck) filterTruck.addEventListener('change', triggerRender);
+    if(filterStatus) filterStatus.addEventListener('change', triggerRender);
+}
+
+// LOGIKA OTOMATIS GENERATE PILIHAN DI DROPDOWN BERDASARKAN ISI DATA FIRESTORE
+function populateFilterDropdowns() {
+    const currentTransopterVal = filterTransporter.value;
+    const currentStageVal = filterStage.value;
+    const currentTruckVal = filterTruck.value;
+
+    let transporters = new Set();
+    let stages = new Set();
+    let trucks = new Set();
+
+    appData.forEach(item => {
+        if(item.transporter) transporters.add(item.transporter.trim());
+        if(item.stage) stages.add(item.stage.trim());
+        if(item.truckType) trucks.add(item.truckType.trim());
+    });
+
+    // Reset isi dropdown kecuali opsi paling atas
+    filterTransporter.innerHTML = '<option value="">-- ALL TRANSPORTER --</option>' + Array.from(transporters).sort().map(t => `<option value="${t}">${t}</option>`).join('');
+    filterStage.innerHTML = '<option value="">-- ALL STAGE --</option>' + Array.from(stages).sort((a,b)=>a-b).map(s => `<option value="${s}">STAGE ${s}</option>`).join('');
+    filterTruck.innerHTML = '<option value="">-- ALL TRUCK TYPE --</option>' + Array.from(trucks).sort().map(tr => `<option value="${tr}">${tr}</option>`).join('');
+
+    // Kembalikan posisi filter yang tadinya dipilih agar tidak kereset hilang saat data disinkronkan harian
+    filterTransporter.value = currentTransopterVal || "";
+    filterStage.value = currentStageVal || "";
+    filterTruck.value = currentTruckVal || "";
 }
 
 // REAL-TIME FIRESTORE LISTENER ENGINE
@@ -133,6 +169,9 @@ function listenToFirestore(dateStr) {
         } else {
             appData = [];
         }
+        
+        // Buat pilihan filter dropdown secara dinamis mengikuti perubahan isi data cloud
+        populateFilterDropdowns();
         renderDashboard();
     }, (error) => {
         console.error("Error Fetching dari Firestore Live: ", error);
@@ -374,7 +413,39 @@ function renderTableBody() {
         return;
     }
 
-    tableBody.innerHTML = appData.map((item, index) => {
+    // AMBIL DATA VALUE DARI EXCEL FILTER PANEL
+    const sGlobal = searchGlobal ? searchGlobal.value.trim().toLowerCase() : "";
+    const fTrans = filterTransporter ? filterTransporter.value : "";
+    const fStg = filterStage ? filterStage.value : "";
+    const fTrk = filterTruck ? filterTruck.value : "";
+    const fStat = filterStatus ? filterStatus.value : "";
+
+    // PROSES PENYARINGAN BERBASIS LOGIKA KOMBINASI EXCEL
+    const filteredRows = appData.filter(item => {
+        // 1. Filter Pencarian Teks Global (Mencakup Order ID & Nama Customer)
+        if (sGlobal) {
+            const matchId = item.id && item.id.toLowerCase().includes(sGlobal);
+            const matchCust = item.customerName && item.customerName.toLowerCase().includes(sGlobal);
+            if (!matchId && !matchCust) return false;
+        }
+        // 2. Filter Transporter Dropdown
+        if (fTrans && item.transporter !== fTrans) return false;
+        // 3. Filter Stage Number Dropdown
+        if (fStg && item.stage !== fStg) return false;
+        // 4. Filter Tipe Truk Dropdown
+        if (fTrk && item.truckType !== fTrk) return false;
+        // 5. Filter Status Dropdown
+        if (fStat && item.status !== fStat) return false;
+
+        return true;
+    });
+
+    if (filteredRows.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="100%" class="text-center p-8 text-gray-400 italic font-medium">Tidak ada baris data yang cocok dengan kriteria filter pencarian kamu.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = filteredRows.map((item, index) => {
         let badgeColor = 'bg-yellow-100 text-yellow-800';
         if (item.status === 'Gate In') badgeColor = 'bg-blue-100 text-blue-800';
         if (item.status === 'Proses Muat') badgeColor = 'bg-orange-100 text-orange-800';
@@ -400,7 +471,7 @@ function renderTableBody() {
                 <td class="px-3 py-2">${item.truckType || '-'}</td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>${timeLog}</td>
                 <td class="px-3 py-2 font-mono">${calculateDuration(item.time_otw, item.time_gatein)}</td>
-                <td class="px-3 py-2 font-mono text-orange-600">${calculateDuration(item.time_gatein, item.time_prosesmuat)}</td>
+                <td class="px-3 py-2 font-mono text-orange-600">${calculateDuration(item.time_gatein, item.time_selesaimuat)}</td>
                 <td class="px-3 py-2 font-mono text-purple-600">${calculateDuration(item.time_selesaimuat, item.time_gateout)}</td>
                 <td class="px-3 py-2 font-mono font-bold text-emerald-600">${calculateDuration(item.time_gatein, item.time_gateout)}</td>
                 ${customCellsHtml}
@@ -408,7 +479,7 @@ function renderTableBody() {
             </tr>`;
     }).join('');
 
-    // Event Delegation
+    // Re-bind Event delegation setelah render baris data baru
     document.querySelectorAll('.custom-in').forEach(el => el.addEventListener('change', (e) => {
         const idx = e.target.getAttribute('data-idx');
         const key = e.target.getAttribute('data-key');
