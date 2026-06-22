@@ -30,7 +30,7 @@
             </button>
         </nav>
         <div class="p-4 border-t border-slate-800 bg-[#0f172a] text-center text-[10px] text-slate-500">
-            v2.2 Cloud & Barcode Active
+            v2.3 Dropdown Barcode Active
         </div>
     </aside>
 
@@ -86,7 +86,7 @@
 
                     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3 lg:col-span-2">
                         <div>
-                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🕹 nighttime Admin Scan Emulator</h3>
+                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🕹️ Admin Scan Emulator</h3>
                             <p class="text-[11px] text-gray-400 mt-0.5">Simulasi input manual langsung dari sisi admin.</p>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -104,29 +104,26 @@
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                    <div>
-                        <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🖨️ Master Checklist Barcodes (4 Tahapan Kerja)</h3>
-                        <p class="text-[11px] text-gray-400 mt-0.5">Barcode statis harian yang ditempel di pos area atau discan langsung dari layar monitor admin.</p>
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🖨️ Master Checklist Barcode Generator</h3>
+                            <p class="text-[11px] text-gray-400 mt-0.5">Pilih tahapan proses untuk memunculkan barcode ukuran besar (Close-up) agar mudah di-scan HP.</p>
+                        </div>
+                        <div>
+                            <select id="select-barcode-process" class="p-2 border border-gray-300 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                                <option value="">-- PILIH TAHAPAN CHECKPOINT --</option>
+                                <option value="Gate In">1. Pos Security - Gate In</option>
+                                <option value="Proses Muat">2. Loket Gudang - Proses Muat</option>
+                                <option value="Selesai Muat">3. Loket Gudang - Selesai Muat</option>
+                                <option value="Gate Out">4. Pos Security - Gate Out</option>
+                            </select>
+                        </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                            <span class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">1. POS SECURITY (IN)</span>
-                            <svg id="barcode-gatein"></svg>
-                        </div>
-                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                            <span class="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-2">2. LOKET GUDANG (START)</span>
-                            <svg id="barcode-prosesmuat"></svg>
-                        </div>
-                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                            <span class="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">3. LOKET GUDANG (FINISH)</span>
-                            <svg id="barcode-selesaimuat"></svg>
-                        </div>
-                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                            <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-2">4. POS SECURITY (OUT)</span>
-                            <svg id="barcode-gateout"></svg>
-                        </div>
+                    <div id="barcode-display-container" class="hidden border border-dashed border-gray-200 bg-gray-50 p-6 rounded-xl flex flex-col items-center justify-center min-h-[160px] transition-all">
+                        <span id="barcode-title-text" class="text-xs font-extrabold uppercase tracking-widest mb-3"></span>
+                        <svg id="master-barcode-canvas" class="bg-white p-4 rounded-lg shadow-sm"></svg>
                     </div>
                 </div>
 
