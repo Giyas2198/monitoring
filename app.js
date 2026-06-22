@@ -32,7 +32,6 @@ let appData = [];
 let customColumns = JSON.parse(localStorage.getItem('jotrans_columns')) || [];
 let unsubscribeFirestore = null; 
 
-// Elemen Navigasi Tab Menu
 const navYardBtn = document.getElementById('nav-yard');
 const navWarehouseBtn = document.getElementById('nav-warehouse');
 const viewYardMonitoring = document.getElementById('view-yard-monitoring');
@@ -73,7 +72,7 @@ const scanOrderId = document.getElementById('scan-order-id');
 const scanCheckpoint = document.getElementById('scan-checkpoint');
 const btnScan = document.getElementById('btn-scan');
 
-// ELEMEN INPUT INTERAKTIF FILTRASI EXCEL
+// FILTER INPUT DEFIINITIONS
 const searchGlobal = document.getElementById('search-global');
 const filterTransporter = document.getElementById('filter-transporter');
 const filterStage = document.getElementById('filter-stage');
@@ -117,9 +116,11 @@ function initBarcodeDropdown() {
     });
 }
 
-// MANAGEMENT LIVE INTERACTIVE EXCEL FILTER LISTENERS
+// BINDING EVENT LISTENER INTERAKTIF UNTUK SINKRONISASI FILTER EXCEL
 function initExcelFilterListeners() {
-    const triggerRender = () => { renderTableBody(); };
+    const triggerRender = () => { 
+        renderTableBody(); 
+    };
     
     if(searchGlobal) searchGlobal.addEventListener('input', triggerRender);
     if(filterTransporter) filterTransporter.addEventListener('change', triggerRender);
@@ -128,7 +129,7 @@ function initExcelFilterListeners() {
     if(filterStatus) filterStatus.addEventListener('change', triggerRender);
 }
 
-// LOGIKA OTOMATIS GENERATE PILIHAN DI DROPDOWN BERDASARKAN ISI DATA FIRESTORE
+// MENGISI PILIHAN DROPDOWN SECARA DINAMIS TANPA MERUSAK POSISI FILTER YANG SEDANG DIPILIH
 function populateFilterDropdowns() {
     const currentTransopterVal = filterTransporter.value;
     const currentStageVal = filterStage.value;
@@ -144,12 +145,10 @@ function populateFilterDropdowns() {
         if(item.truckType) trucks.add(item.truckType.trim());
     });
 
-    // Reset isi dropdown kecuali opsi paling atas
     filterTransporter.innerHTML = '<option value="">-- ALL TRANSPORTER --</option>' + Array.from(transporters).sort().map(t => `<option value="${t}">${t}</option>`).join('');
     filterStage.innerHTML = '<option value="">-- ALL STAGE --</option>' + Array.from(stages).sort((a,b)=>a-b).map(s => `<option value="${s}">STAGE ${s}</option>`).join('');
     filterTruck.innerHTML = '<option value="">-- ALL TRUCK TYPE --</option>' + Array.from(trucks).sort().map(tr => `<option value="${tr}">${tr}</option>`).join('');
 
-    // Kembalikan posisi filter yang tadinya dipilih agar tidak kereset hilang saat data disinkronkan harian
     filterTransporter.value = currentTransopterVal || "";
     filterStage.value = currentStageVal || "";
     filterTruck.value = currentTruckVal || "";
@@ -170,7 +169,6 @@ function listenToFirestore(dateStr) {
             appData = [];
         }
         
-        // Buat pilihan filter dropdown secara dinamis mengikuti perubahan isi data cloud
         populateFilterDropdowns();
         renderDashboard();
     }, (error) => {
@@ -356,7 +354,7 @@ function calculateTransporterPerformance() {
 }
 
 // ==========================================
-// RENDERING DASHBOARD & COUNTERS
+// RENDERING DASHBOARD MAIN CONTROL
 // ==========================================
 function renderDashboard() { 
     updateCounters(); 
@@ -413,29 +411,24 @@ function renderTableBody() {
         return;
     }
 
-    // AMBIL DATA VALUE DARI EXCEL FILTER PANEL
+    // MEMBACA DATA VALUE NYATA DARI ELEMEN FILTER DROPDOWN LAPISAN ATAS
     const sGlobal = searchGlobal ? searchGlobal.value.trim().toLowerCase() : "";
     const fTrans = filterTransporter ? filterTransporter.value : "";
     const fStg = filterStage ? filterStage.value : "";
     const fTrk = filterTruck ? filterTruck.value : "";
     const fStat = filterStatus ? filterStatus.value : "";
 
-    // PROSES PENYARINGAN BERBASIS LOGIKA KOMBINASI EXCEL
+    // PROSES SINKRONISASI DATA ARRAY BERBASIS STRUKTUR EXCEL FILTER
     const filteredRows = appData.filter(item => {
-        // 1. Filter Pencarian Teks Global (Mencakup Order ID & Nama Customer)
         if (sGlobal) {
             const matchId = item.id && item.id.toLowerCase().includes(sGlobal);
             const matchCust = item.customerName && item.customerName.toLowerCase().includes(sGlobal);
             if (!matchId && !matchCust) return false;
         }
-        // 2. Filter Transporter Dropdown
-        if (fTrans && item.transporter !== fTrans) return false;
-        // 3. Filter Stage Number Dropdown
-        if (fStg && item.stage !== fStg) return false;
-        // 4. Filter Tipe Truk Dropdown
-        if (fTrk && item.truckType !== fTrk) return false;
-        // 5. Filter Status Dropdown
-        if (fStat && item.status !== fStat) return false;
+        if (fTrans && String(item.transporter).trim() !== fTrans) return false;
+        if (fStg && String(item.stage).trim() !== fStg) return false;
+        if (fTrk && String(item.truckType).trim() !== fTrk) return false;
+        if (fStat && String(item.status).trim() !== fStat) return false;
 
         return true;
     });
@@ -479,7 +472,7 @@ function renderTableBody() {
             </tr>`;
     }).join('');
 
-    // Re-bind Event delegation setelah render baris data baru
+    // Re-bind Event delegation
     document.querySelectorAll('.custom-in').forEach(el => el.addEventListener('change', (e) => {
         const idx = e.target.getAttribute('data-idx');
         const key = e.target.getAttribute('data-key');
