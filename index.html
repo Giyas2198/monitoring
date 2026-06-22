@@ -6,6 +6,7 @@
     <title>JO-TRANS - Enterprise Logistics Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -29,7 +30,7 @@
             </button>
         </nav>
         <div class="p-4 border-t border-slate-800 bg-[#0f172a] text-center text-[10px] text-slate-500">
-            v2.1 Cloud Active (Firestore)
+            v2.2 Cloud & Barcode Active
         </div>
     </aside>
 
@@ -85,8 +86,8 @@
 
                     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3 lg:col-span-2">
                         <div>
-                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🕹️ Admin Scan Emulator</h3>
-                            <p class="text-[11px] text-gray-400 mt-0.5">Simulasi input scanner manual langsung dari sisi admin.</p>
+                            <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🕹 nighttime Admin Scan Emulator</h3>
+                            <p class="text-[11px] text-gray-400 mt-0.5">Simulasi input manual langsung dari sisi admin.</p>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <input type="text" id="scan-order-id" placeholder="Ketik Order ID..." class="p-2 border rounded-lg text-xs font-bold bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase">
@@ -99,6 +100,32 @@
                             <button id="btn-scan" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow-sm">
                                 Trigger Checkpoint
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                    <div>
+                        <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider">🖨️ Master Checklist Barcodes (4 Tahapan Kerja)</h3>
+                        <p class="text-[11px] text-gray-400 mt-0.5">Barcode statis harian yang ditempel di pos area atau discan langsung dari layar monitor admin.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                            <span class="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">1. POS SECURITY (IN)</span>
+                            <svg id="barcode-gatein"></svg>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                            <span class="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-2">2. LOKET GUDANG (START)</span>
+                            <svg id="barcode-prosesmuat"></svg>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                            <span class="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-2">3. LOKET GUDANG (FINISH)</span>
+                            <svg id="barcode-selesaimuat"></svg>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                            <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-2">4. POS SECURITY (OUT)</span>
+                            <svg id="barcode-gateout"></svg>
                         </div>
                     </div>
                 </div>
@@ -118,8 +145,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse min-w-[1000px]">
                             <thead>
-                                <tr id="table-header" class="bg-gray-100 border-b border-gray-200 text-gray-600 text-[10px] uppercase tracking-wider">
-                                    </tr>
+                                <tr id="table-header" class="bg-gray-100 border-b border-gray-200 text-gray-600 text-[10px] uppercase tracking-wider"></tr>
                             </thead>
                             <tbody id="table-body" class="divide-y divide-gray-200 text-gray-700">
                                 <tr>
@@ -140,8 +166,7 @@
                         </div>
                         <div class="text-[10px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded border border-amber-200 uppercase tracking-wide">Live Warehouse KPI</div>
                     </div>
-                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        </div>
+                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </section>
             </div>
 
