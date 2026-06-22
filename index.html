@@ -6,8 +6,11 @@
     <title>JO-TRANS - Enterprise Logistics Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -43,6 +46,18 @@
                         <span class="flex items-center gap-3">📍 Track Delivery</span>
                         <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
                     </div>
+                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
+                        <span class="flex items-center gap-3">🗄️ Master Data Transport</span>
+                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
+                    </div>
+                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
+                        <span class="flex items-center gap-3">🤖 Auto CS WhatsApp Blast</span>
+                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
+                    </div>
+                    <div class="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate-400 bg-slate-800/30 border border-transparent border-dashed hover:border-slate-700 transition group cursor-not-allowed">
+                        <span class="flex items-center gap-3">🧾 Track DT & Surat Jalan</span>
+                        <span class="text-[9px] bg-indigo-950 text-indigo-400 px-1.5 py-0.5 rounded font-medium border border-indigo-800">SOON</span>
+                    </div>
                 </nav>
             </div>
         </div>
@@ -61,7 +76,7 @@
             </div>
             <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">Cloud Firestore Live</span>
+                <span class="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">Firebase Realtime Mode</span>
             </div>
         </header>
 
@@ -95,7 +110,7 @@
                     <div class="lg:col-span-4 space-y-6">
                         <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                             <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2">📂 Master Data Upload</h3>
-                            <p class="text-[11px] text-gray-400 mb-3">Impor data ke Cloud Firestore.</p>
+                            <p class="text-[11px] text-gray-400 mb-3">Impor data ke tanggal aktif yang dipilih.</p>
                             <input type="file" id="csv-file" accept=".csv" 
                                    class="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition"/>
                         </div>
@@ -118,23 +133,6 @@
                                     </select>
                                 </div>
                                 <button id="btn-scan" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition">Submit Scan Log</button>
-                            </div>
-
-                            <div class="mt-5 pt-4 border-t border-gray-100">
-                                <label class="block text-[10px] font-bold text-slate-700 uppercase tracking-wide mb-1">🖨️ Generate Barcode Pos Checker</label>
-                                <div class="flex gap-2 mb-2">
-                                    <select id="gen-checkpoint" class="flex-1 p-2 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-700">
-                                        <option value="Gate In">Gate In</option>
-                                        <option value="Proses Muat">Proses Muat</option>
-                                        <option value="Selesai Muat">Selesai Muat</option>
-                                        <option value="Gate Out">Gate Out</option>
-                                    </select>
-                                    <button id="btn-gen-qr" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-800">Buat QR</button>
-                                </div>
-                                <div class="flex flex-col items-center justify-center p-2 bg-gray-50 rounded-lg border hidden" id="qr-container">
-                                    <div id="qrcode" class="p-2 bg-white border"></div>
-                                    <p id="qr-label" class="text-[10px] font-bold text-gray-700 mt-2 uppercase"></p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -178,13 +176,16 @@
                         </div>
                         <div class="text-[10px] bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded border border-amber-200 uppercase tracking-wide">Live Warehouse KPI</div>
                     </div>
-                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4"></div>
+                    
+                    <div id="transporter-perf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                        <div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data muatan aktif untuk dianalisis pada hari ini.</div>
+                    </div>
                 </section>
             </div>
 
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
