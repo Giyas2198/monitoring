@@ -32,7 +32,6 @@ let appData = [];
 let customColumns = JSON.parse(localStorage.getItem('jotrans_columns')) || [];
 let unsubscribeFirestore = null; 
 
-// DOM Elements Navigation Menu
 const navYardBtn = document.getElementById('nav-yard');
 const navWarehouseBtn = document.getElementById('nav-warehouse');
 const viewYardMonitoring = document.getElementById('view-yard-monitoring');
@@ -61,7 +60,7 @@ function switchPage(target) {
 if(navYardBtn) navYardBtn.addEventListener('click', () => switchPage('yard'));
 if(navWarehouseBtn) navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
 
-// CORE ELEMENT DEFIINITIONS
+// CORE ELEMENT DEFINITIONS
 const fileInput = document.getElementById('csv-file');
 const tableHeader = document.getElementById('table-header');
 const tableBody = document.getElementById('table-body');
@@ -79,17 +78,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     listenToFirestore(selectedDate);
     
-    // GENERATE 4 BARCODE STRUKTUR PROSES SECARA LIVE SAAT PAGE DIBUKA
-    generateMasterBarcodes();
+    // AKTIFKAN HANDLER DROPDOWN BARCODE CLOSE-UP
+    initBarcodeDropdown();
 });
 
-function generateMasterBarcodes() {
-    const options = { format: "CODE128", width: 1.5, height: 50, displayValue: true, fontSize: 11 };
-    
-    if(document.getElementById('barcode-gatein')) JsBarcode("#barcode-gatein", "Gate In", options);
-    if(document.getElementById('barcode-prosesmuat')) JsBarcode("#barcode-prosesmuat", "Proses Muat", options);
-    if(document.getElementById('barcode-selesaimuat')) JsBarcode("#barcode-selesaimuat", "Selesai Muat", options);
-    if(document.getElementById('barcode-gateout')) JsBarcode("#barcode-gateout", "Gate Out", options);
+function initBarcodeDropdown() {
+    const selectProcess = document.getElementById('select-barcode-process');
+    const container = document.getElementById('barcode-display-container');
+    const titleText = document.getElementById('barcode-title-text');
+
+    if (!selectProcess) return;
+
+    selectProcess.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (!val) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        container.classList.remove('hidden');
+        
+        if (val === "Gate In") titleText.className = "text-xs font-extrabold text-blue-600 uppercase tracking-widest mb-3";
+        if (val === "Proses Muat") titleText.className = "text-xs font-extrabold text-orange-600 uppercase tracking-widest mb-3";
+        if (val === "Selesai Muat") titleText.className = "text-xs font-extrabold text-purple-600 uppercase tracking-widest mb-3";
+        if (val === "Gate Out") titleText.className = "text-xs font-extrabold text-green-600 uppercase tracking-widest mb-3";
+        
+        titleText.innerText = `🎯 BARCODE TARGET: ${val}`;
+
+        // Konfigurasi Close-Up Super Renggang (width: 3, height: 90) agar HP mudah memindai
+        JsBarcode("#master-barcode-canvas", val, {
+            format: "CODE128",
+            width: 3,
+            height: 90,
+            displayValue: true,
+            fontSize: 13,
+            fontOptions: "bold",
+            background: "#ffffff",
+            lineColor: "#000000"
+        });
+    });
 }
 
 // REAL-TIME FIRESTORE LISTENER ENGINE
