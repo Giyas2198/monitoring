@@ -69,12 +69,18 @@ const tableBody = document.getElementById('table-body');
 const btnAddColumn = document.getElementById('btn-add-column');
 const btnResetAll = document.getElementById('btn-reset-all');
 const btnUploadCustom = document.getElementById('btn-upload-custom');
-const btnSaveFirebase = document.getElementById('btn-save-firebase'); // Element Tombol Baru
+const btnSaveFirebase = document.getElementById('btn-save-firebase'); 
 const datePicker = document.getElementById('archive-date-picker');
 
 const scanOrderId = document.getElementById('scan-order-id');
 const scanCheckpoint = document.getElementById('scan-checkpoint');
 const btnScan = document.getElementById('btn-scan');
+
+// Elements untuk Fitur Baru QR Code Generator
+const qrSelectOrder = document.getElementById('qr-select-order');
+const btnGenerateQr = document.getElementById('btn-generate-qr');
+const qrcodeOutput = document.getElementById('qrcode-output');
+const qrLabelUnder = document.getElementById('qr-label-under');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -84,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncWithFirebase(selectedDate);
 });
 
-// SINKRONISASI AKTIF DUA ARAH DENGAN FIREBASE
+// SINKRONISASI REALTIME DENGAN FIREBASE
 let firebaseListenerRef = null;
 function syncWithFirebase(dateStr) {
     if (firebaseListenerRef) {
@@ -95,7 +101,6 @@ function syncWithFirebase(dateStr) {
     firebaseListenerRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            // Jika data di firebase berbentuk objek/key-value, ubah ke array agar fungsi render aman
             appData = Object.keys(data).map(key => {
                 if (typeof data[key] === 'object' && data[key] !== null) {
                     return { firebaseKey: key, ...data[key] };
@@ -106,6 +111,7 @@ function syncWithFirebase(dateStr) {
             appData = [];
         }
         renderDashboard();
+        updateQrDropdown(); // Perbarui list dropdown QR code generator
     }, (error) => {
         console.error("Firebase Sync Error:", error);
     });
@@ -118,13 +124,51 @@ if (datePicker) {
     });
 }
 
-// FUNGSI UNTUK MENEMBAK DATA KE FIREBASE (DIKONTROL TOMBOL & AKSI)
+// LOGIKA UPDATE DROPDOWN QR GENERATOR
+function updateQrDropdown() {
+    if (!qrSelectOrder) return;
+    if (appData.length === 0) {
+        qrSelectOrder.innerHTML = '<option value="">-- BELUM ADA DATA ORDER --</option>';
+        return;
+    }
+    let optionsHtml = '<option value="">-- PILIH ORDER ID --</option>';
+    appData.forEach(item => {
+        if (item.id) {
+            optionsHtml += `<option value="${item.id}">[Stage ${item.stage}] - ${item.id}</option>`;
+        }
+    });
+    qrSelectOrder.innerHTML = optionsHtml;
+}
+
+// ACTION BUTTON GENERATE QR CODE
+let qrCodeInstance = null;
+btnGenerateQr.addEventListener('click', () => {
+    const selectedOrderId = qrSelectOrder.value;
+    if (!selectedOrderId) {
+        alert("Pilih Order ID terlebih dahulu di dropdown!");
+        return;
+    }
+
+    qrcodeOutput.innerHTML = ""; // Bersihkan kontainer lama
+    qrLabelUnder.innerText = `ORDER ID: ${selectedOrderId}`;
+
+    // Generate QR Code baru (Isinya murni Order ID agar bisa dicocokkan oleh driver.html)
+    qrCodeInstance = new QRCode(qrcodeOutput, {
+        text: selectedOrderId,
+        width: 140,
+        height: 140,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+});
+
+// FUNGSI SAVE TO FIREBASE MANUAL
 function pushDataToFirebase() {
-    // Kita simpan dalam format objek terstruktur berdasarkan Order ID agar driver mudah melakukan update secara spesifik
     const dataToSave = {};
     appData.forEach(item => {
         if (item.id) {
-            const cleanKey = item.id.replace(/[.#$\[\]]/g, "_"); // Bersihkan karakter ilegal firebase key
+            const cleanKey = item.id.replace(/[.#$\[\]]/g, "_"); 
             dataToSave[cleanKey] = {
                 id: item.id,
                 transporter: item.transporter || '',
@@ -141,7 +185,6 @@ function pushDataToFirebase() {
                 time_selesaimuat: item.time_selesaimuat || '',
                 time_gateout: item.time_gateout || ''
             };
-            // Masukkan kolom kustom jika ada
             customColumns.forEach(col => {
                 const lowerCol = col.toLowerCase();
                 dataToSave[cleanKey][lowerCol] = item[lowerCol] || '';
@@ -154,7 +197,6 @@ function pushDataToFirebase() {
         .catch((err) => { alert("❌ Gagal Menyimpan ke Firebase: " + err.message); });
 }
 
-// Listener Event klik Tombol Save Firebase Manual
 btnSaveFirebase.addEventListener('click', pushDataToFirebase);
 
 // ==========================================
@@ -210,7 +252,8 @@ function processRawData(rawRows) {
     });
 
     appData = parsedData; 
-    renderDashboard(); // Render ke tabel lokal dulu agar user bisa review
+    renderDashboard(); 
+    updateQrDropdown();
     fileInput.value = "";
     alert(`⚠️ Data CSV berhasil dimuat ke tabel lokal (${appData.length} baris). SILAKAN KLIK TOMBOL 'SAVE TO FIREBASE' UNTUK SUBMIT KE CLOUD!`);
 }
