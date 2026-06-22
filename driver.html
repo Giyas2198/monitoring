@@ -7,44 +7,58 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
+    <!-- CORE FIREBASE SDK (V8) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-gray-950 text-white font-sans min-h-screen flex flex-col justify-between">
 
+    <!-- Header -->
     <header class="bg-gray-900 p-4 text-center border-b border-gray-800 shadow-md">
         <h1 class="text-md font-bold tracking-widest text-blue-400">📲 STAGE SCANNER PORTAL</h1>
         <p class="text-[11px] text-gray-500 mt-0.5">Automated Time Stamp by Stage Area Location</p>
     </header>
 
+    <!-- Main Content -->
     <main class="p-4 flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full space-y-4">
         
+        <!-- Live Clock Info -->
         <div class="text-center">
             <span id="live-clock" class="bg-gray-800 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-mono border border-gray-700">
                 Memuat Jam Lokal HP...
             </span>
         </div>
 
+        <!-- STEP 1: Pilih Stage Area -->
         <div class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-lg space-y-3">
             <div>
-                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Pilih Pos Checkpoint Anda Sekarang</label>
-                <select id="driver-checkpoint" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-emerald-400 focus:outline-none focus:border-blue-500">
-                    <option value="Gate In">1. Pos Security - Gate In</option>
-                    <option value="Proses Muat">2. Loket Gudang - Proses Muat</option>
-                    <option value="Selesai Muat">3. Loket Gudang - Selesai Muat</option>
-                    <option value="Gate Out">4. Pos Security - Gate Out</option>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">1. Pilih / Tentukan Nomor Stage Lapangan</label>
+                <select id="select-stage" onchange="toggleManualStage()" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-bold text-yellow-400 focus:outline-none focus:border-blue-500">
+                    <option value="">-- PILIH NOMOR STAGE --</option>
+                    <option value="35">STAGE 35</option>
+                    <option value="37">STAGE 37</option>
+                    <option value="MANUAL_INPUT">INPUT STAGE MANUAL</option>
                 </select>
+            </div>
+
+            <!-- Hidden Input Box untuk Stage Manual jika tidak ada di list -->
+            <div id="manual-stage-container" class="hidden">
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ketik Nomor Stage Manual</label>
+                <input type="text" id="input-stage-manual" placeholder="Masukkan nomor stage..." 
+                       class="w-full p-3 bg-gray-800 border border-orange-500/50 rounded-lg text-sm font-bold uppercase text-orange-400 focus:outline-none focus:border-orange-500">
             </div>
         </div>
 
+        <!-- STEP 2: Kamera Scanner -->
         <div class="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 shadow-lg flex flex-col items-center">
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">Scan QR Code Order ID Dari Monitor Utama</label>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 w-full text-left">2. Bidik Kamera ke Barcode Checkpoint (Gate In / Muat / Selesai / Out)</label>
             <div id="reader" class="w-full bg-black rounded-lg overflow-hidden" style="max-width: 340px;"></div>
             <div id="scan-status" class="mt-3 text-xs font-medium text-gray-500 italic text-center animate-pulse">
                 Menghubungkan kamera...
             </div>
         </div>
 
+        <!-- Toast Notification Panel -->
         <div id="toast-msg" class="hidden w-full p-4 rounded-xl text-center font-bold text-sm shadow-lg transition-all duration-300"></div>
 
     </main>
@@ -73,12 +87,24 @@
         const scanStatusText = document.getElementById('scan-status');
         const toastMsg = document.getElementById('toast-msg');
         const liveClock = document.getElementById('live-clock');
-        const driverCheckpoint = document.getElementById('driver-checkpoint');
+        const selectStage = document.getElementById('select-stage');
+        const manualStageContainer = document.getElementById('manual-stage-container');
+        const inputStageManual = document.getElementById('input-stage-manual');
 
         setInterval(() => {
             const now = new Date();
             liveClock.innerText = `Waktu HP: ${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`;
         }, 1000);
+
+        function toggleManualStage() {
+            if (selectStage.value === "MANUAL_INPUT") {
+                manualStageContainer.classList.remove('hidden');
+                inputStageManual.focus();
+            } else {
+                manualStageContainer.classList.add('hidden');
+                inputStageManual.value = "";
+            }
+        }
 
         function showToast(message, isSuccess) {
             toastMsg.innerText = message;
@@ -87,9 +113,24 @@
             setTimeout(() => { toastMsg.classList.add('hidden'); }, 5000);
         }
 
-        // FUNGSI UTAMA SINKRONISASI UPDATE JIKA SCAN QR TERPENCIL BERHASIL
-        function processDriverScan(scannedOrderId) {
-            const currentPos = driverCheckpoint.value;
+        // ENGINE SINKRONISASI MASSAL BERDASARKAN NOMOR STAGE
+        function processStageScan(scannedPos) {
+            let finalStageName = selectStage.value;
+            if (finalStageName === "MANUAL_INPUT") {
+                finalStageName = inputStageManual.value.trim();
+            }
+
+            if (!finalStageName) {
+                showToast("⚠️ ERROR: Silakan tentukan nomor Stage terlebih dahulu!", false);
+                return;
+            }
+
+            const validPositions = ["Gate In", "Proses Muat", "Selesai Muat", "Gate Out"];
+            if (!validPositions.includes(scannedPos)) {
+                showToast(`⚠️ ERROR: Barcode Checkpoint Tidak Valid! Terbaca: "${scannedPos}"`, false);
+                return;
+            }
+
             const now = new Date();
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
             const isoString = now.toISOString();
@@ -98,49 +139,56 @@
                                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                                  String(now.getDate()).padStart(2, '0');
 
-            // Bersihkan key ilegal dari Order ID hasil scan untuk mencari di database
-            const targetFirebaseKey = scannedOrderId.trim().toUpperCase().replace(/[.#$\[\]]/g, "_");
-
-            const dbRef = db.ref(`jotrans_data/${localDateStr}/${targetFirebaseKey}`);
-            
-            // Cek apakah data spesifik Order ID tersebut terdaftar di Firebase untuk hari ini
+            // Ambil snapshot node tanggal aktif dari Firebase cloud
+            const dbRef = db.ref(`jotrans_data/${localDateStr}`);
             dbRef.once('value').then((snapshot) => {
-                let orderData = snapshot.val();
-                if (!orderData) {
-                    showToast(`⚠️ ERROR: Order ID [${scannedOrderId}] tidak valid atau belum di-upload/save pada hari ini (${localDateStr}).`, false);
+                let appData = snapshot.val();
+                if (!appData) {
+                    showToast(`⚠️ WARNING: Data cloud tanggal [${localDateStr}] kosong. Silakan upload & save CSV dulu di dashboard kantor!`, false);
                     return;
                 }
 
-                // Modifikasi status tracking & timestamp lokasi secara presisi
-                let updates = {};
-                updates['status'] = currentPos;
-                updates['last_scan_time'] = timeStampString;
+                let updatedCount = 0;
                 
-                if (currentPos === 'Gate In') updates['time_gatein'] = isoString;
-                if (currentPos === 'Proses Muat') updates['time_prosesmuat'] = isoString;
-                if (currentPos === 'Selesai Muat') updates['time_selesaimuat'] = isoString;
-                if (currentPos === 'Gate Out') updates['time_gateout'] = isoString;
+                // Iterasi data di Firebase dan update massal yang nomor Stage-nya sama dengan input HP
+                Object.keys(appData).forEach(key => {
+                    if (String(appData[key].stage).trim() === finalStageName.trim()) {
+                        appData[key].status = scannedPos;
+                        appData[key].last_scan_time = timeStampString;
+                        
+                        if (scannedPos === 'Gate In') appData[key].time_gatein = isoString;
+                        if (scannedPos === 'Proses Muat') appData[key].time_prosesmuat = isoString;
+                        if (scannedPos === 'Selesai Muat') appData[key].time_selesaimuat = isoString;
+                        if (scannedPos === 'Gate Out') appData[key].time_gateout = isoString;
 
-                // Tembak update perubahan langsung ke Firebase Node spesifik
-                dbRef.update(updates).then(() => {
-                    showToast(`✅ BERHASIL SINKRON CLOUD! Order [${scannedOrderId}] di-update ke status [${currentPos}]`, true);
+                        updatedCount++;
+                    }
+                });
+
+                if (updatedCount === 0) {
+                    showToast(`ℹ️ Scan Sukses, namun tidak ada antrian order aktif di Stage [${finalStageName}] untuk hari ini.`, false);
+                    return;
+                }
+
+                // Kirim pembaruan kembali ke Firebase node secara massal
+                dbRef.update(appData).then(() => {
+                    showToast(`✅ BERHASIL UPDATE! Stage [${finalStageName}] sebanyak ${updatedCount} Order otomatis berubah ke [${scannedPos}]`, true);
                 });
             }).catch(err => {
                 console.error(err);
-                showToast("❌ Hubungan koneksi ke cloud Firebase terputus.", false);
+                showToast("❌ Gagal mengirim pembaruan status ke cloud Firebase.", false);
             });
         }
 
         function onScanSuccess(decodedText, decodedResult) {
             html5QrcodeScanner.clear();
-            processDriverScan(decodedText.trim());
-            // Delay 3 detik lalu aktifkan kamera kembali secara otomatis
+            processStageScan(decodedText.trim());
             setTimeout(() => { startScanner(); }, 3000);
         }
 
         let html5QrcodeScanner;
         function startScanner() {
-            scanStatusText.innerText = "📷 Kamera Aktif. Arahkan ke QR Monitor Utama.";
+            scanStatusText.innerText = "📷 Kamera Siap. Pindai Barcode Nama Pos Checkpoint.";
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
                 fps: 15, 
                 qrbox: { width: 250, height: 250 },
