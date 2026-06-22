@@ -1,23 +1,24 @@
 // ==========================================
-// FIREBASE INITIALIZATION & CONFIGURATION
+// FIREBASE INITIALIZATION (MODULAR SDK v10)
 // ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 const firebaseConfig = {
-    apiKey: "AIzaSyYourRealApiKeyHere_xxxxxxxx",
-    authDomain: "jo-trans-project.firebaseapp.com",
-    databaseURL: "https://jo-trans-project-default-rtdb.firebaseio.com", 
-    projectId: "jo-trans-project",
-    storageBucket: "jo-trans-project.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:123456:web:abcd1234"
+    apiKey: "AIzaSyCvdAfDBlciiSqsnAjW8PXx-pxv64ztdhU",
+    authDomain: "jtn-pr-control.firebaseapp.com",
+    projectId: "jtn-pr-control",
+    storageBucket: "jtn-pr-control.firebasestorage.app",
+    messagingSenderId: "921630437726",
+    appId: "1:921630437726:web:811585e1c987d7fea79fcf",
+    measurementId: "G-N6FT0VX8LN"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.database();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // ==========================================
-// STATE & NAVIGATION MANAGEMENT
+// CONFIGURATION, STATE & NAVIGATION MANAGEMENT
 // ==========================================
 const getTodayDateString = () => {
     const d = new Date();
@@ -29,8 +30,9 @@ const getTodayDateString = () => {
 let selectedDate = getTodayDateString();
 let appData = [];
 let customColumns = JSON.parse(localStorage.getItem('jotrans_columns')) || [];
+let unsubscribeFirestore = null; 
 
-// DOM Elements Navigasi Sidebar
+// DOM Elements Navigation Menu
 const navYardBtn = document.getElementById('nav-yard');
 const navWarehouseBtn = document.getElementById('nav-warehouse');
 const viewYardMonitoring = document.getElementById('view-yard-monitoring');
@@ -56,115 +58,80 @@ function switchPage(target) {
     }
 }
 
-navYardBtn.addEventListener('click', () => switchPage('yard'));
-navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
+if(navYardBtn) navYardBtn.addEventListener('click', () => switchPage('yard'));
+if(navWarehouseBtn) navWarehouseBtn.addEventListener('click', () => switchPage('warehouse'));
 
-// ==========================================
-// CORE DOM ELEMENTS SELECTION
-// ==========================================
+// CORE ELEMENT DEFIINITIONS
 const fileInput = document.getElementById('csv-file');
-const customFileInput = document.getElementById('custom-csv-file');
 const tableHeader = document.getElementById('table-header');
 const tableBody = document.getElementById('table-body');
 const btnAddColumn = document.getElementById('btn-add-column');
 const btnResetAll = document.getElementById('btn-reset-all');
-const btnUploadCustom = document.getElementById('btn-upload-custom');
-const btnSaveFirebase = document.getElementById('btn-save-firebase'); 
 const datePicker = document.getElementById('archive-date-picker');
 
 const scanOrderId = document.getElementById('scan-order-id');
 const scanCheckpoint = document.getElementById('scan-checkpoint');
 const btnScan = document.getElementById('btn-scan');
 
-// Initialization
 document.addEventListener('DOMContentLoaded', () => {
     if (datePicker) {
         datePicker.value = selectedDate;
     }
-    syncWithFirebase(selectedDate);
+    listenToFirestore(selectedDate);
 });
 
-// SINKRONISASI REALTIME DENGAN FIREBASE DB
-let firebaseListenerRef = null;
-function syncWithFirebase(dateStr) {
-    if (firebaseListenerRef) {
-        firebaseListenerRef.off(); 
+// REAL-TIME FIRESTORE LISTENER ENGINE
+function listenToFirestore(dateStr) {
+    if (unsubscribeFirestore) {
+        unsubscribeFirestore(); 
     }
 
-    firebaseListenerRef = db.ref(`jotrans_data/${dateStr}`);
-    firebaseListenerRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            appData = Object.keys(data).map(key => {
-                if (typeof data[key] === 'object' && data[key] !== null) {
-                    return { firebaseKey: key, ...data[key] };
-                }
-                return data[key];
-            });
+    // Mengarah ke dokumen sub-tanggal, misal: monitoring_dt/status_2026-06-22
+    const docRef = doc(db, "monitoring_dt", `status_${dateStr}`);
+    
+    unsubscribeFirestore = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists() && docSnap.data().items) {
+            appData = docSnap.data().items;
         } else {
             appData = [];
         }
         renderDashboard();
     }, (error) => {
-        console.error("Firebase Sync Error:", error);
+        console.error("Error Fetching dari Firestore Live: ", error);
     });
+}
+
+async function saveToFirestore() {
+    const docRef = doc(db, "monitoring_dt", `status_${selectedDate}`);
+    try {
+        await setDoc(docRef, { items: appData }, { merge: true });
+    } catch (error) {
+        console.error("Gagal sinkronisasi data ke Cloud Firestore: ", error);
+        alert("Koneksi gagal! Gagal menyimpan perubahan data ke server.");
+    }
 }
 
 if (datePicker) {
     datePicker.addEventListener('change', (e) => {
         selectedDate = e.target.value;
-        syncWithFirebase(selectedDate);
+        listenToFirestore(selectedDate);
     });
 }
 
-// LOGIKA SUBMIT DATA KE FIREBASE MANUAL LEWAT TOMBOL SAVE
-function pushDataToFirebase() {
-    const dataToSave = {};
-    appData.forEach(item => {
-        if (item.id) {
-            const cleanKey = item.id.replace(/[.#$\[\]]/g, "_"); 
-            dataToSave[cleanKey] = {
-                id: item.id,
-                transporter: item.transporter || '',
-                stage: item.stage || '-',
-                customerName: item.customerName || '-',
-                shipTo: item.shipTo || '-',
-                volume: item.volume || '0',
-                truckType: item.truckType || '-',
-                status: item.status || 'OTW Muat',
-                last_scan_time: item.last_scan_time || '',
-                time_otw: item.time_otw || '',
-                time_gatein: item.time_gatein || '',
-                time_prosesmuat: item.time_prosesmuat || '',
-                time_selesaimuat: item.time_selesaimuat || '',
-                time_gateout: item.time_gateout || ''
-            };
-            customColumns.forEach(col => {
-                const lowerCol = col.toLowerCase();
-                dataToSave[cleanKey][lowerCol] = item[lowerCol] || '';
-            });
-        }
+// ==========================================
+// WORKFLOW: CSV UPLOAD PARSER
+// ==========================================
+if(fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) { processRawData(results.data); }
+        });
     });
-
-    db.ref(`jotrans_data/${selectedDate}`).set(dataToSave)
-        .then(() => { alert(`⚡ Sukses menyimpan data aktif ke Firebase untuk tanggal ${selectedDate}!`); })
-        .catch((err) => { alert("❌ Gagal Menyimpan ke Firebase: " + err.message); });
 }
-
-btnSaveFirebase.addEventListener('click', pushDataToFirebase);
-
-// ==========================================
-// CORE WORKFLOW: RAW MASTER CSV UPLOAD
-// ==========================================
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) { processRawData(results.data); }
-    });
-});
 
 function processRawData(rawRows) {
     let currentTransporter = '';
@@ -206,43 +173,43 @@ function processRawData(rawRows) {
     });
 
     appData = parsedData; 
-    renderDashboard(); 
-    fileInput.value = "";
-    alert(`⚠️ Data CSV berhasil dimuat ke tabel lokal (${appData.length} baris). SILAKAN KLIK TOMBOL 'SAVE TO FIREBASE' UNTUK SUBMIT KE CLOUD!`);
+    saveToFirestore(); 
+    if(fileInput) fileInput.value = "";
+    alert(`Berhasil impor ${appData.length} item data ke Firestore untuk tanggal: ${selectedDate}!`);
+}
+
+// Handler Scan Emulator Admin
+if(btnScan) {
+    btnScan.addEventListener('click', () => {
+        const inputId = scanOrderId.value.trim().toUpperCase();
+        const selectedCheckpoint = scanCheckpoint.value;
+        if (!inputId) return;
+        
+        const targetIndex = appData.findIndex(item => item.id.toUpperCase() === inputId);
+        if (targetIndex === -1) { 
+            alert(`Order ID [${inputId}] tidak ditemukan.`); 
+            return; 
+        }
+        
+        const now = new Date();
+        const isoString = now.toISOString();
+        
+        appData[targetIndex].status = selectedCheckpoint;
+        appData[targetIndex].last_scan_time = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+
+        if (selectedCheckpoint === 'Gate In') appData[targetIndex].time_gatein = isoString;
+        if (selectedCheckpoint === 'Proses Muat') appData[targetIndex].time_prosesmuat = isoString;
+        if (selectedCheckpoint === 'Selesai Muat') appData[targetIndex].time_selesaimuat = isoString;
+        if (selectedCheckpoint === 'Gate Out') appData[targetIndex].time_gateout = isoString;
+
+        saveToFirestore(); 
+        scanOrderId.value = ''; 
+        scanOrderId.focus();
+    });
 }
 
 // ==========================================
-// BARCODE SCAN LOGIC (EMULATOR LOCAL DASHBOARD)
-// ==========================================
-btnScan.addEventListener('click', () => {
-    const inputId = scanOrderId.value.trim().toUpperCase();
-    const selectedCheckpoint = scanCheckpoint.value;
-    if (!inputId) return;
-    
-    const targetIndex = appData.findIndex(item => item.id.toUpperCase() === inputId);
-    if (targetIndex === -1) { 
-        alert(`Order ID [${inputId}] tidak ditemukan pada rekaman tanggal ${selectedDate}.`); 
-        return; 
-    }
-    
-    const now = new Date();
-    const isoString = now.toISOString();
-    
-    appData[targetIndex].status = selectedCheckpoint;
-    appData[targetIndex].last_scan_time = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-
-    if (selectedCheckpoint === 'Gate In') appData[targetIndex].time_gatein = isoString;
-    if (selectedCheckpoint === 'Proses Muat') appData[targetIndex].time_prosesmuat = isoString;
-    if (selectedCheckpoint === 'Selesai Muat') appData[targetIndex].time_selesaimuat = isoString;
-    if (selectedCheckpoint === 'Gate Out') appData[targetIndex].time_gateout = isoString;
-
-    pushDataToFirebase(); 
-    scanOrderId.value = ''; 
-    scanOrderId.focus();
-});
-
-// ==========================================
-// DURATION & KPI CALCULATION ENGINE
+// DURATION & KPI ENGINE
 // ==========================================
 function calculateDuration(startTimeStr, endTimeStr) {
     if (!startTimeStr || !endTimeStr) return '-';
@@ -251,40 +218,27 @@ function calculateDuration(startTimeStr, endTimeStr) {
     const diffMs = end - start;
     if (diffMs < 0) return '-';
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) {
-        return `${diffMins} mnt`;
-    } else {
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        return `${hours} jam ${mins} mnt`;
-    }
+    return diffMins < 60 ? `${diffMins} mnt` : `${Math.floor(diffMins / 60)} jam ${diffMins % 60} mnt`;
 }
 
 function getDurationInMinutes(startTimeStr, endTimeStr) {
     if (!startTimeStr || !endTimeStr) return null;
     const start = new Date(startTimeStr);
     const end = new Date(endTimeStr);
-    const diffMs = end - start;
-    return diffMs >= 0 ? Math.floor(diffMs / 60000) : null;
+    return (end - start) >= 0 ? Math.floor((end - start) / 60000) : null;
 }
 
-// ==========================================
-// ADVANCED REPORT: TRANSPORTER PERFORMANCE
-// ==========================================
 function formatMinutesToText(totalMins) {
     if (totalMins === null || isNaN(totalMins)) return '-';
     if (totalMins < 60) return `${Math.round(totalMins)} mnt`;
-    const hours = Math.floor(totalMins / 60);
-    const mins = Math.round(totalMins % 60);
-    return `${hours} jam ${mins} mnt`;
+    return `${Math.floor(totalMins / 60)} jam ${Math.round(totalMins % 60)} mnt`;
 }
 
 function calculateTransporterPerformance() {
     const perfGrid = document.getElementById('transporter-perf-grid');
     if (!perfGrid) return;
-
     if (appData.length === 0) {
-        perfGrid.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data untuk kalkulasi KPI riwayat performa ekspedisi.</div>`;
+        perfGrid.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-gray-400 italic">Belum ada data untuk kalkulasi KPI.</div>`;
         return;
     }
 
@@ -295,7 +249,6 @@ function calculateTransporterPerformance() {
             groups[trans] = { name: trans, totalOrders: 0, antriMins: [], muatMins: [], adminOutMins: [] };
         }
         groups[trans].totalOrders++;
-
         const mAntri = getDurationInMinutes(item.time_otw, item.time_gatein);
         const mMuat = getDurationInMinutes(item.time_gatein, item.time_selesaimuat);
         const mAdmin = getDurationInMinutes(item.time_selesaimuat, item.time_gateout);
@@ -305,11 +258,10 @@ function calculateTransporterPerformance() {
         if (mAdmin !== null) groups[trans].adminOutMins.push(mAdmin);
     });
 
-    let htmlCards = Object.values(groups).map(g => {
+    perfGrid.innerHTML = Object.values(groups).map(g => {
         const avgAntri = g.antriMins.length ? (g.antriMins.reduce((a, b) => a + b, 0) / g.antriMins.length) : null;
         const avgMuat = g.muatMins.length ? (g.muatMins.reduce((a, b) => a + b, 0) / g.muatMins.length) : null;
         const avgAdmin = g.adminOutMins.length ? (g.adminOutMins.reduce((a, b) => a + b, 0) / g.adminOutMins.length) : null;
-
         return `
             <div class="bg-gray-50 border border-gray-200 p-5 rounded-xl flex flex-col justify-between hover:shadow-sm transition">
                 <div>
@@ -318,102 +270,17 @@ function calculateTransporterPerformance() {
                         <span class="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">${g.totalOrders} Loads</span>
                     </div>
                     <div class="space-y-2 text-[11px]">
-                        <div class="flex justify-between text-gray-500">
-                            <span>⏳ Rata-rata OTW ➡️ Gate In:</span>
-                            <span class="font-mono font-bold text-gray-700">${formatMinutesToText(avgAntri)}</span>
-                        </div>
-                        <div class="flex justify-between text-gray-500">
-                            <span>🏗️ Rata-rata Proses Muat:</span>
-                            <span class="font-mono font-bold text-orange-600">${formatMinutesToText(avgMuat)}</span>
-                        </div>
-                        <div class="flex justify-between text-gray-500">
-                            <span>📄 Rata-rata Selesai ➡️ Gate Out:</span>
-                            <span class="font-mono font-bold text-purple-600">${formatMinutesToText(avgAdmin)}</span>
-                        </div>
+                        <div class="flex justify-between text-gray-500"><span>⏳ Rata-rata OTW ➡️ Gate In:</span><span class="font-mono font-bold text-gray-700">${formatMinutesToText(avgAntri)}</span></div>
+                        <div class="flex justify-between text-gray-500"><span>🏗️ Rata-rata Proses Muat:</span><span class="font-mono font-bold text-orange-600">${formatMinutesToText(avgMuat)}</span></div>
+                        <div class="flex justify-between text-gray-500"><span>📄 Rata-rata Selesai ➡️ Gate Out:</span><span class="font-mono font-bold text-purple-600">${formatMinutesToText(avgAdmin)}</span></div>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
-    perfGrid.innerHTML = htmlCards;
 }
 
 // ==========================================
-// CUSTOM COLUMN MANAGEMENT
-// ==========================================
-btnUploadCustom.addEventListener('click', () => {
-    if (appData.length === 0) {
-        alert(`⚠️ WARNING: Upload Master Data Pengiriman terlebih dahulu!`);
-        return;
-    }
-    customFileInput.click();
-});
-
-customFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: function(results) { processCustomColumnCSV(results.data); }
-    });
-});
-
-function processCustomColumnCSV(csvRows) {
-    if (csvRows.length === 0) return;
-    const headers = Object.keys(csvRows[0]).map(h => h.trim());
-    const orderKey = headers.find(h => h.toLowerCase() === 'customer order' || h.toLowerCase() === 'order id');
-    const customDataKey = headers.find(h => h.toLowerCase() !== 'customer order' && h.toLowerCase() !== 'order id' && h !== '');
-
-    if (!orderKey || !customDataKey) {
-        alert("❌ ERROR: Format CSV kustom harus menyertakan kolom 'Customer Order'.");
-        return;
-    }
-
-    const lowerCustomKey = customDataKey.toLowerCase();
-    if (!customColumns.includes(customDataKey)) {
-        customColumns.push(customDataKey);
-        localStorage.setItem('jotrans_columns', JSON.stringify(customColumns));
-    }
-
-    let updateMatchCount = 0;
-    csvRows.forEach(row => {
-        const targetOrderId = row[orderKey] ? row[orderKey].trim().toUpperCase() : '';
-        const incomingValue = row[customDataKey] ? row[customDataKey].trim() : '';
-
-        if (targetOrderId) {
-            const index = appData.findIndex(item => item.id.toUpperCase() === targetOrderId);
-            if (index !== -1) {
-                appData[index][lowerCustomKey] = incomingValue;
-                updateMatchCount++;
-            }
-        }
-    });
-
-    pushDataToFirebase();
-    customFileInput.value = "";
-    alert(`⚡ SUKSES: Kolom kustom [${customDataKey}] dimasukkan ke ${updateMatchCount} order.`);
-}
-
-btnAddColumn.addEventListener('click', () => {
-    const columnName = prompt("Masukkan nama kolom manual baru:");
-    if (!columnName) return;
-    const cleanKey = columnName.trim();
-    if (customColumns.includes(cleanKey)) return;
-    
-    customColumns.push(cleanKey);
-    localStorage.setItem('jotrans_columns', JSON.stringify(customColumns));
-    appData = appData.map(item => ({ ...item, [cleanKey.toLowerCase()]: '' }));
-    pushDataToFirebase();
-});
-
-function updateCustomValue(index, key, val) { 
-    appData[index][key] = val; 
-    pushDataToFirebase(); 
-}
-
-// ==========================================
-// RENDER UI ELEMENTS
+// RENDERING DASHBOARD & COUNTERS
 // ==========================================
 function renderDashboard() { 
     updateCounters(); 
@@ -430,11 +297,7 @@ function updateCounters() {
         const stageNum = (item.stage || '').trim();
         const status = item.status;
         const truckType = (item.truckType || '').trim().toUpperCase(); 
-        
-        let volume = 0;
-        if (item.volume) {
-            volume = parseFloat(String(item.volume).replace(/,/g, '')) || 0;
-        }
+        let volume = item.volume ? parseFloat(String(item.volume).replace(/,/g, '')) || 0 : 0;
 
         if (stageNum && status) {
             const groupKey = `${stageNum}_${status}_${truckType}`;
@@ -446,16 +309,10 @@ function updateCounters() {
     });
 
     let finalCounts = { 'OTW Muat': 0, 'Gate In': 0, 'Proses Muat': 0, 'Selesai Muat': 0, 'Gate Out': 0 };
-
     Object.values(stageGroups).forEach(group => {
         const capacity = truckCapacities[group.truckType];
-        let calculatedTrucks = 1; 
-        if (capacity && group.totalVolume > 0) {
-            calculatedTrucks = Math.ceil(group.totalVolume / capacity);
-        }
-        if (finalCounts[group.status] !== undefined) {
-            finalCounts[group.status] += calculatedTrucks;
-        }
+        let calculatedTrucks = (capacity && group.totalVolume > 0) ? Math.ceil(group.totalVolume / capacity) : 1;
+        if (finalCounts[group.status] !== undefined) finalCounts[group.status] += calculatedTrucks;
     });
 
     document.getElementById('count-otw').innerText = finalCounts['OTW Muat'] + " Mobil";
@@ -466,18 +323,17 @@ function updateCounters() {
 }
 
 function renderTableHeader() {
-    let headers = [
-        'Transporter', 'Stage', 'Order ID', 'Customer Name', 'Volume', 'Tipe Truk', 'Status Workflow',
-        '⏳ Antri (OTW-In)', '🏗️ Proses Muat', '📄 Admin Out', '⏱️ Total Yard Time'
-    ];
+    if(!tableHeader) return;
+    let headers = ['Transporter', 'Stage', 'Order ID', 'Customer Name', 'Volume', 'Tipe Truk', 'Status Workflow', '⏳ Antri', '🏗️ Muat', '📄 Admin Out', '⏱️ Total Yard'];
     customColumns.forEach(col => headers.push(col));
     headers.push('Aksi');
     tableHeader.innerHTML = headers.map(h => `<th class="px-3 py-3 font-semibold">${h}</th>`).join('');
 }
 
 function renderTableBody() {
+    if(!tableBody) return;
     if (appData.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="100%" class="text-center p-12 text-gray-400 italic font-medium">Belum ada data aktif pada tanggal ${selectedDate}. Silakan unggah file CSV pengiriman baru.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="100%" class="text-center p-12 text-gray-400 italic font-medium">Belum ada data aktif pada tanggal ${selectedDate} di Firestore.</td></tr>`;
         return;
     }
 
@@ -489,66 +345,63 @@ function renderTableBody() {
         if (item.status === 'Gate Out') badgeColor = 'bg-green-100 text-green-800';
 
         const getLastScanTimeOnly = (dataItem) => {
-            let targetIso = '';
-            if (dataItem.status === 'OTW Muat') targetIso = dataItem.time_otw;
-            if (dataItem.status === 'Gate In') targetIso = dataItem.time_gatein;
-            if (dataItem.status === 'Proses Muat') targetIso = dataItem.time_prosesmuat;
-            if (dataItem.status === 'Selesai Muat') targetIso = dataItem.time_selesaimuat;
-            if (dataItem.status === 'Gate Out') targetIso = dataItem.time_gateout;
-
+            let targetIso = dataItem.status === 'Gate In' ? dataItem.time_gatein : dataItem.status === 'Proses Muat' ? dataItem.time_prosesmuat : dataItem.status === 'Selesai Muat' ? dataItem.time_selesaimuat : dataItem.status === 'Gate Out' ? dataItem.time_gateout : dataItem.time_otw;
             if (!targetIso) return '';
-            const dateObj = new Date(targetIso);
-            return dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return new Date(targetIso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         };
 
-        const jamScanTerakhir = getLastScanTimeOnly(item);
-        let timeLog = jamScanTerakhir ? `<br><span class="text-[10px] text-gray-500 font-mono font-semibold">⏱️ ${jamScanTerakhir}</span>` : '';
-
-        const durasiAntri = calculateDuration(item.time_otw, item.time_gatein);
-        const durasiMuat = calculateDuration(item.time_gatein, item.time_selesaimuat);
-        const durasiAdminOut = calculateDuration(item.time_selesaimuat, item.time_gateout);
-        const totalYardTime = calculateDuration(item.time_gatein, item.time_gateout);
-
-        let customCellsHtml = customColumns.map(col => {
-            let key = col.toLowerCase();
-            return `<td><input type="text" value="${item[key] || ''}" onchange="updateCustomValue(${index}, '${key}', this.value)" class="border p-1 rounded w-24 text-xs bg-gray-50 focus:bg-white"></td>`;
-        }).join('');
+        let timeLog = getLastScanTimeOnly(item) ? `<br><span class="text-[10px] text-gray-500 font-mono font-semibold">⏱️ ${getLastScanTimeOnly(item)}</span>` : '';
+        let customCellsHtml = customColumns.map(col => `<td><input type="text" value="${item[col.toLowerCase()] || ''}" data-idx="${index}" data-key="${col.toLowerCase()}" class="custom-in border p-1 rounded w-24 text-xs bg-gray-50"></td>`).join('');
 
         return `
             <tr class="hover:bg-gray-50 transition border-b text-xs">
-                <td class="px-3 py-2 font-medium">${item.transporter}</td>
+                <td class="px-3 py-2">${item.transporter}</td>
                 <td class="px-3 py-2 font-semibold text-blue-600">${item.stage}</td>
-                <td class="px-3 py-2 font-bold text-gray-700">${item.id}</td>
+                <td class="px-3 py-2 font-bold">${item.id}</td>
                 <td class="px-3 py-2 truncate max-w-[120px]">${item.customerName}</td>
                 <td class="px-3 py-2">${item.volume}</td>
-                <td class="px-3 py-2 font-semibold text-gray-600">${item.truckType || '-'}</td>
-                
-                <td class="px-3 py-2 text-center">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>
-                    ${timeLog}
-                </td>
-
-                <td class="px-3 py-2 font-mono text-gray-600 font-medium">${durasiAntri}</td>
-                <td class="px-3 py-2 font-mono text-orange-600 font-medium">${durasiMuat}</td>
-                <td class="px-3 py-2 font-mono text-purple-600 font-medium">${durasiAdminOut}</td>
-                <td class="px-3 py-2 font-mono font-bold text-emerald-600">${totalYardTime}</td>
-                
+                <td class="px-3 py-2">${item.truckType || '-'}</td>
+                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>${timeLog}</td>
+                <td class="px-3 py-2 font-mono">${calculateDuration(item.time_otw, item.time_gatein)}</td>
+                <td class="px-3 py-2 font-mono text-orange-600">${calculateDuration(item.time_gatein, item.time_selesaimuat)}</td>
+                <td class="px-3 py-2 font-mono text-purple-600">${calculateDuration(item.time_selesaimuat, item.time_gateout)}</td>
+                <td class="px-3 py-2 font-mono font-bold text-emerald-600">${calculateDuration(item.time_gatein, item.time_gateout)}</td>
                 ${customCellsHtml}
-                <td class="px-3 py-2"><button onclick="deleteRow(${index})" class="text-red-500 hover:text-red-700 font-medium">Hapus</button></td>
-            </tr>
-        `;
+                <td class="px-3 py-2"><button data-del="${index}" class="text-red-500 hover:text-red-700 font-bold btn-del">Hapus</button></td>
+            </tr>`;
     }).join('');
+
+    // Event Delegation
+    document.querySelectorAll('.custom-in').forEach(el => el.addEventListener('change', (e) => {
+        const idx = e.target.getAttribute('data-idx');
+        const key = e.target.getAttribute('data-key');
+        appData[idx][key] = e.target.value;
+        saveToFirestore();
+    }));
+    document.querySelectorAll('.btn-del').forEach(el => el.addEventListener('click', (e) => {
+        const idx = el.getAttribute('data-del');
+        if (confirm("Hapus order ini?")) { appData.splice(idx, 1); saveToFirestore(); }
+    }));
 }
 
-btnResetAll.addEventListener('click', () => {
-    if (confirm(`⚠️ PERINGATAN: Menghapus data tracking aktif di Firebase khusus tanggal ${selectedDate}?`)) {
-        db.ref(`jotrans_data/${selectedDate}`).remove();
-    }
-});
-
-function deleteRow(index) { 
-    if (confirm("Hapus order ini dari Firebase?")) { 
-        appData.splice(index, 1); 
-        pushDataToFirebase();
-    } 
+// MANAJEMEN RESET & DATA KOLOM MANUAL
+if(btnResetAll) {
+    btnResetAll.addEventListener('click', async () => {
+        if (confirm(`Hapus seluruh data tracking di Firestore untuk tanggal ${selectedDate}?`)) {
+            appData = [];
+            await saveToFirestore();
+        }
+    });
+}
+if(btnAddColumn) {
+    btnAddColumn.addEventListener('click', () => {
+        const columnName = prompt("Masukkan nama kolom manual baru:");
+        if (!columnName) return;
+        const cleanKey = columnName.trim();
+        if (customColumns.includes(cleanKey)) return;
+        customColumns.push(cleanKey);
+        localStorage.setItem('jotrans_columns', JSON.stringify(customColumns));
+        appData = appData.map(item => ({ ...item, [cleanKey.toLowerCase()]: '' }));
+        saveToFirestore();
+    });
 }
