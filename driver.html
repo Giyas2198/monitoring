@@ -102,8 +102,9 @@
             setTimeout(() => { toastMsg.classList.add('hidden'); }, 5000);
         }
 
-        // ENGINE SCAN CLOUD UTAMA BERDASARKAN STAGE AREA
+        // ENGINE SCAN CLOUD UTAMA BERDASARKAN STAGE AREA (PERBAIKAN SENSITIVITAS)
         async function processStageScan(scannedPos) {
+            const cleanPos = String(scannedPos).trim();
             let finalStageName = selectStage.value === "MANUAL_INPUT" ? inputStageManual.value.trim() : selectStage.value;
 
             if (!finalStageName) {
@@ -112,8 +113,8 @@
             }
 
             const validPositions = ["Gate In", "Proses Muat", "Selesai Muat", "Gate Out"];
-            if (!validPositions.includes(scannedPos)) {
-                showToast(`⚠️ ERROR: Barcode Salah! Terbaca: "${scannedPos}"`, false);
+            if (!validPositions.includes(cleanPos)) {
+                showToast(`⚠️ ERROR: Format Barcode Tidak Dikenal! Terbaca: "${cleanPos}"`, false);
                 return;
             }
 
@@ -121,7 +122,6 @@
             const timeStampString = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
             const isoString = now.toISOString();
 
-            // Mendapatkan Key Tanggal Hari Ini (Format: YYYY-MM-DD)
             const localDateStr = now.getFullYear() + '-' + 
                                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                                  String(now.getDate()).padStart(2, '0');
@@ -138,16 +138,16 @@
                 let appData = docSnap.data().items || [];
                 let updatedCount = 0;
 
-                // Update seluruh order yang memiliki nomor STAGE yang cocok
+                // Lakukan pencocokan data massal berbasis stage number
                 appData = appData.map(item => {
                     if (String(item.stage).trim() === finalStageName.trim()) {
-                        item.status = scannedPos;
+                        item.status = cleanPos;
                         item.last_scan_time = timeStampString;
                         
-                        if (scannedPos === 'Gate In') item.time_gatein = isoString;
-                        if (scannedPos === 'Proses Muat') item.time_prosesmuat = isoString;
-                        if (scannedPos === 'Selesai Muat') item.time_selesaimuat = isoString;
-                        if (scannedPos === 'Gate Out') item.time_gateout = isoString;
+                        if (cleanPos === 'Gate In') item.time_gatein = isoString;
+                        if (cleanPos === 'Proses Muat') item.time_prosesmuat = isoString;
+                        if (cleanPos === 'Selesai Muat') item.time_selesaimuat = isoString;
+                        if (cleanPos === 'Gate Out') item.time_gateout = isoString;
 
                         updatedCount++;
                     }
@@ -155,13 +155,12 @@
                 });
 
                 if (updatedCount === 0) {
-                    showToast(`ℹ️ Scan terbaca [${scannedPos}], namun tidak ditemukan antrean aktif pada Stage [${finalStageName}] hari ini.`, false);
+                    showToast(`ℹ️ Teks [${cleanPos}] terbaca, tapi tidak ada antrean order aktif di Stage [${finalStageName}] untuk hari ini.`, false);
                     return;
                 }
 
-                // Kirim balik data perubahan massal ke Firestore Cloud
                 await setDoc(docRef, { items: appData }, { merge: true });
-                showToast(`✅ CLOUD UPDATED! Stage [${finalStageName}] (${updatedCount} Order) diupdate ke [${scannedPos}]`, true);
+                showToast(`✅ CLOUD UPDATED! Stage [${finalStageName}] sebanyak ${updatedCount} Order diupdate ke [${cleanPos}]`, true);
 
             } catch (error) {
                 console.error(error);
@@ -169,7 +168,6 @@
             }
         }
 
-        // Jalankan Scanner Kamera HP
         let html5QrcodeScanner;
         function startScanner() {
             scanStatusText.innerText = "📷 Kamera Siap. Scan Barcode Pos Checklist.";
@@ -182,7 +180,6 @@
             html5QrcodeScanner.render((decodedText) => {
                 html5QrcodeScanner.clear();
                 processStageScan(decodedText.trim());
-                // Nyalakan ulang kamera otomatis setelah jeda 3 detik
                 setTimeout(() => { startScanner(); }, 3000);
             }, (err) => {});
         }
