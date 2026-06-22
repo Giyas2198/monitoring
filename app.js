@@ -78,7 +78,19 @@ document.addEventListener('DOMContentLoaded', () => {
         datePicker.value = selectedDate;
     }
     listenToFirestore(selectedDate);
+    
+    // GENERATE 4 BARCODE STRUKTUR PROSES SECARA LIVE SAAT PAGE DIBUKA
+    generateMasterBarcodes();
 });
+
+function generateMasterBarcodes() {
+    const options = { format: "CODE128", width: 1.5, height: 50, displayValue: true, fontSize: 11 };
+    
+    if(document.getElementById('barcode-gatein')) JsBarcode("#barcode-gatein", "Gate In", options);
+    if(document.getElementById('barcode-prosesmuat')) JsBarcode("#barcode-prosesmuat", "Proses Muat", options);
+    if(document.getElementById('barcode-selesaimuat')) JsBarcode("#barcode-selesaimuat", "Selesai Muat", options);
+    if(document.getElementById('barcode-gateout')) JsBarcode("#barcode-gateout", "Gate Out", options);
+}
 
 // REAL-TIME FIRESTORE LISTENER ENGINE
 function listenToFirestore(dateStr) {
@@ -86,7 +98,6 @@ function listenToFirestore(dateStr) {
         unsubscribeFirestore(); 
     }
 
-    // Mengarah ke dokumen sub-tanggal, misal: monitoring_dt/status_2026-06-22
     const docRef = doc(db, "monitoring_dt", `status_${dateStr}`);
     
     unsubscribeFirestore = onSnapshot(docRef, (docSnap) => {
@@ -178,7 +189,6 @@ function processRawData(rawRows) {
     alert(`Berhasil impor ${appData.length} item data ke Firestore untuk tanggal: ${selectedDate}!`);
 }
 
-// Handler Scan Emulator Admin
 if(btnScan) {
     btnScan.addEventListener('click', () => {
         const inputId = scanOrderId.value.trim().toUpperCase();
@@ -363,7 +373,7 @@ function renderTableBody() {
                 <td class="px-3 py-2">${item.truckType || '-'}</td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}">${item.status}</span>${timeLog}</td>
                 <td class="px-3 py-2 font-mono">${calculateDuration(item.time_otw, item.time_gatein)}</td>
-                <td class="px-3 py-2 font-mono text-orange-600">${calculateDuration(item.time_gatein, item.time_selesaimuat)}</td>
+                <td class="px-3 py-2 font-mono text-orange-600">${calculateDuration(item.time_gatein, item.time_prosesmuat)}</td>
                 <td class="px-3 py-2 font-mono text-purple-600">${calculateDuration(item.time_selesaimuat, item.time_gateout)}</td>
                 <td class="px-3 py-2 font-mono font-bold text-emerald-600">${calculateDuration(item.time_gatein, item.time_gateout)}</td>
                 ${customCellsHtml}
